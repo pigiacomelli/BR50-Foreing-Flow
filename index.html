@@ -51,7 +51,7 @@
         <nav class="tabs" aria-label="Navegação de fases">
             <button type="button" class="tabs__btn tab-btn active" data-tab="phase1" aria-selected="true">📈 Visualização</button>
             <button type="button" class="tabs__btn tab-btn" data-tab="phase2" aria-selected="false">📊 Estatísticas</button>
-            <button type="button" class="tabs__btn tab-btn" data-tab="phase-juros" aria-selected="false">🏦 Juros Futuros</button>
+            <button type="button" class="tabs__btn tab-btn" data-tab="phase-juros" aria-selected="false">🏦 Juros (Selic)</button>
             <button type="button" class="tabs__btn tab-btn" data-tab="phase3" aria-selected="false">🎯 Simulação</button>
         </nav>
 
@@ -166,7 +166,7 @@
             <section id="phase-juros" class="tab-content" aria-labelledby="phase-juros">
                 <div class="metrics-row" style="grid-template-columns: repeat(2, 1fr);">
                     <div class="metric-card">
-                        <span class="metric-card__label">IRFM11 Atual (Proxy Juros)</span>
+                        <span class="metric-card__label">Taxa Selic Atual</span>
                         <span id="metric-juros-rate" class="metric-card__value">-</span>
                     </div>
                     <div class="metric-card">
@@ -178,26 +178,11 @@
                 <div class="chart-container">
                     <div class="card">
                         <header class="card__header">
-                            <h2 class="card__title">IBrX-50 vs Juros Futuros Prefixados (IRFM11)</h2>
-                            <p class="card__subtitle">A correlação costuma ser positiva no gráfico porque o IRFM11 já reflete os juros de forma invertida (se os juros sobem, o ETF e a Bolsa caem juntos).</p>
+                            <h2 class="card__title">IBrX-50 vs Taxa Selic (Série 11)</h2>
+                            <p class="card__subtitle">Acompanhe como a bolsa reage aos ciclos de alta e baixa da Selic.</p>
                         </header>
                         <div class="card__body">
                             <canvas id="rates-chart" aria-label="Gráfico de Juros vs Bolsa"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- NOVO: Curva de Juros Transversal (TradingView) -->
-                <div class="chart-container">
-                    <div class="card">
-                        <header class="card__header">
-                            <h2 class="card__title">Curva de Juros Futuros Atual (ETTJ)</h2>
-                            <p class="card__subtitle">Estrutura a termo extraída em tempo real via TradingView (1m até 10 anos).</p>
-                        </header>
-                        <div class="card__body" style="position: relative;">
-                            <div id="curve-loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00d4ff;">Buscando dados ao vivo do TradingView...</div>
-                            <div id="curve-error" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ff4757; display: none;"></div>
-                            <canvas id="curve-chart" aria-label="Gráfico da Curva de Juros Atual"></canvas>
                         </div>
                     </div>
                 </div>

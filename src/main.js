@@ -3,13 +3,13 @@
  * Orchestrates data loading, chart rendering, and UI interactions
  */
 import './style.css';
-import { fetchPTAX, calculateDailyChanges } from './api/bcb.js';
-import { fetchMarketData, calculateReturns, fetchJurosFuturos } from './api/market.js';
+import { fetchPTAX, calculateDailyChanges, fetchSelic } from './api/bcb.js';
+import { fetchMarketData, calculateReturns } from './api/market.js';
 import { mergeByDate, formatNumber, formatPercent, formatDateBR } from './utils/helpers.js';
 import { createMainChart, createFlowChart, destroyCharts } from './charts/priceChart.js';
 import { createScatterChart, createLagChart, createRollingChart, destroyStatsCharts } from './charts/statsChart.js';
 import { createRatesChart, destroyRatesCharts } from './charts/ratesChart.js';
-import { createCurveChart, destroyCurveChart } from './charts/curveChart.js';
+import { createRatesChart, destroyRatesCharts } from './charts/ratesChart.js';
 import { runFullAnalysis, pearsonCorrelation } from './analysis/statistics.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -101,7 +101,7 @@ async function loadData() {
     const [marketResult, ptaxRaw, jurosRaw] = await Promise.all([
       fetchMarketData(startDate, endDate),
       fetchPTAX(startDate, endDate),
-      fetchJurosFuturos(startDate, endDate),
+      fetchSelic(startDate, endDate),
     ]);
 
     console.log(`✓ Market data: ${marketResult.data.length} points (${marketResult.tickerInfo.name})`);
@@ -233,7 +233,7 @@ function renderPhaseJuros(mergedData, indexName) {
   // Update stat cards
   const jurosRateEl = document.getElementById('metric-juros-rate');
   if (jurosRateEl) {
-    jurosRateEl.textContent = `R$ ${latest.jurosClose.toFixed(2)}`;
+    jurosRateEl.textContent = `${latest.jurosClose.toFixed(2)}%`;
   }
 
   const jurosCorrEl = document.getElementById('metric-juros-corr');
@@ -252,9 +252,6 @@ function renderPhaseJuros(mergedData, indexName) {
   // Draw charts
   destroyRatesCharts();
   createRatesChart(mergedData, indexName);
-  
-  // Render TV Yield Curve asynchronously
-  createCurveChart();
 }
 
 // ── Initialize Application ─────────────────────────────────────────────────

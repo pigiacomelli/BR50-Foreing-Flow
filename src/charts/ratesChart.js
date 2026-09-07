@@ -33,7 +33,7 @@ export function createRatesChart(mergedData, indexName) {
           pointHitRadius: 10,
         },
         {
-          label: 'Curva de Juros (IRFM11)',
+          label: 'Taxa Selic',
           data: validData.map(d => d.jurosClose),
           borderColor: '#ffa502', // gold
           backgroundColor: 'transparent',
@@ -69,7 +69,7 @@ export function createRatesChart(mergedData, indexName) {
               if (context.datasetIndex === 0) {
                 label += new Intl.NumberFormat('pt-BR').format(context.parsed.y) + ' pts';
               } else {
-                label += 'R$ ' + context.parsed.y.toFixed(2);
+                label += context.parsed.y.toFixed(2) + '% a.a.';
               }
               return label;
             }
