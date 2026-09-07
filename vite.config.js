@@ -14,6 +14,12 @@ export default defineConfig({
           'User-Agent': 'Mozilla/5.0',
         },
       },
+      // Proxy BCB SGS API to avoid CORS issues
+      '/api/bcb': {
+        target: 'https://api.bcb.gov.br',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/bcb/, ''),
+      },
     },
   },
   build: {

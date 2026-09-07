@@ -4,7 +4,7 @@
  * Uses OLINDA API as primary source, SGS as fallback
  */
 
-const BCB_SGS_URL = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs';
+const BCB_SGS_URL = '/api/bcb/dados/serie/bcdata.sgs';
 const BCB_OLINDA_URL = 'https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata';
 
 /**
