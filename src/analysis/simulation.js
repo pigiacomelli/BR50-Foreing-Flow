@@ -4,36 +4,32 @@
  */
 
 /**
- * Runs a backtest using the 5-consecutive dollar drops rule.
+ * Runs a backtest using the Market Timing (X% Drop) vs Buy & Hold.
  * 
- * Rule: Buy the index (IBrX-50) when USD/BRL falls for 5 consecutive days.
- * Exit: Sell after a specified hold duration (e.g., 5, 15, or 30 days).
+ * Rule: Hold cash until USD/BRL falls by at least X% in a single day. 
+ * Then buy IBrX-50 with 100% of capital and hold until the end of the period.
  * 
  * @param {Array} data - The merged market data.
- * @param {number} holdPeriod - Number of days to hold the asset before selling.
- * @param {number} consecutiveDropsTarget - The required number of consecutive drops to trigger a buy.
+ * @param {number} dropThreshold - The percentage drop (e.g., -1.5) required to trigger the buy.
  * @returns {Object} Simulation results including trades and equity curve.
  */
-export function runSimulation(data, holdPeriod = 15, consecutiveDropsTarget = 5) {
-  const trades = [];
+export function runSimulation(data, dropThreshold = -1.5) {
   const initialCapital = 10000; // R$ 10,000 starting capital
-  let currentCapital = initialCapital;
+  let strategyCapital = initialCapital;
+  let inMarket = false;
+  let entryDate = null;
+  let entryPrice = null;
   
+  const firstIndexPrice = data[0].indexClose;
+
   // Equity curve to plot capital over time
-  // Start with day 0
   const equityCurve = [{
     date: data[0].date,
     capital: initialCapital,
     buyAndHoldCapital: initialCapital
   }];
 
-  // We need to track consecutive negative drops in USD/BRL
-  let consecutiveDrops = 0;
-  
-  // To calculate Buy and Hold comparison
-  const firstIndexPrice = data[0].indexClose;
-
-  // We start from day 1 to be able to check changes
+  // Start from day 1
   for (let i = 1; i < data.length; i++) {
     const today = data[i];
     
@@ -41,79 +37,45 @@ export function runSimulation(data, holdPeriod = 15, consecutiveDropsTarget = 5)
     const buyAndHoldReturn = (today.indexClose - firstIndexPrice) / firstIndexPrice;
     const currentBuyAndHoldCapital = initialCapital * (1 + buyAndHoldReturn);
     
-    // Check if Dollar dropped today
-    if (today.usdBrlChange < 0) {
-      consecutiveDrops++;
-    } else {
-      consecutiveDrops = 0;
+    // If we are already in the market, our strategy capital moves with the index
+    if (inMarket) {
+      const dailyReturn = today.indexReturn; // Return from yesterday to today
+      strategyCapital = strategyCapital * (1 + dailyReturn);
+    } 
+    // If not in the market, check for trigger
+    else {
+      // usdBrlChangePercent is positive when dollar goes up, negative when dollar goes down
+      if (today.usdBrlChangePercent <= dropThreshold) {
+        // Trigger buy!
+        inMarket = true;
+        entryDate = today.date;
+        entryPrice = today.indexClose;
+        
+        // The purchase happens at today's close, so the capital doesn't change yet today.
+      }
     }
 
-    // Is there a trigger? (N consecutive drops)
-    // We also make sure we have enough days left to hold the position
-    if (consecutiveDrops >= consecutiveDropsTarget && i + holdPeriod < data.length) {
-      // Trigger buy!
-      const entryDay = today;
-      const exitDay = data[i + holdPeriod];
-      
-      const indexReturn = (exitDay.indexClose - entryDay.indexClose) / entryDay.indexClose;
-      const tradeProfit = currentCapital * indexReturn;
-      
-      trades.push({
-        entryDate: entryDay.date,
-        exitDate: exitDay.date,
-        entryPrice: entryDay.indexClose,
-        exitPrice: exitDay.indexClose,
-        returnPercent: indexReturn * 100,
-        profit: tradeProfit,
-        isWin: indexReturn > 0
-      });
-      
-      // Update capital based on this trade
-      currentCapital += tradeProfit;
-      
-      // Reset the counter so we don't trigger again on the 6th day consecutively (optional, but realistic)
-      consecutiveDrops = 0;
-    }
-    
-    // Push daily equity (in a real backtester, equity goes up/down during the hold, 
-    // but for simplicity we'll just update it immediately upon trade completion, 
-    // or flat if not in trade. A step-function is fine for this high-level view).
     equityCurve.push({
       date: today.date,
-      capital: currentCapital,
+      capital: strategyCapital,
       buyAndHoldCapital: currentBuyAndHoldCapital
     });
   }
 
-  // Calculate global metrics
-  const totalTrades = trades.length;
-  const winningTrades = trades.filter(t => t.isWin).length;
-  const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
-  
-  const totalReturnPercent = ((currentCapital - initialCapital) / initialCapital) * 100;
-  
-  const averageReturn = totalTrades > 0 
-    ? trades.reduce((sum, t) => sum + t.returnPercent, 0) / totalTrades 
-    : 0;
-
-  let bestTrade = 0;
-  let worstTrade = 0;
-  if (totalTrades > 0) {
-    bestTrade = Math.max(...trades.map(t => t.returnPercent));
-    worstTrade = Math.min(...trades.map(t => t.returnPercent));
-  }
+  const finalCapital = strategyCapital;
+  const totalReturnPercent = ((finalCapital - initialCapital) / initialCapital) * 100;
+  const buyAndHoldFinal = initialCapital * (1 + ((data[data.length - 1].indexClose - firstIndexPrice) / firstIndexPrice));
+  const buyAndHoldReturn = ((buyAndHoldFinal - initialCapital) / initialCapital) * 100;
 
   return {
     initialCapital,
-    finalCapital: currentCapital,
+    finalCapital,
     totalReturnPercent,
-    totalTrades,
-    winRate,
-    averageReturn,
-    bestTrade,
-    worstTrade,
-    trades,
+    buyAndHoldFinal,
+    buyAndHoldReturn,
+    entryDate,
+    entryPrice,
     equityCurve,
-    holdPeriod
+    dropThreshold
   };
 }

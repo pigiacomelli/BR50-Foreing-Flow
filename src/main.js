@@ -258,16 +258,14 @@ function renderPhaseJuros(mergedData, indexName) {
 
 // ── Simulation (Integrated in Phase 2) ─────────────────────────────────────
 function renderSimulation(mergedData) {
-  const dropsInput = document.getElementById('sim-drops');
-  const holdInput = document.getElementById('sim-hold');
+  const dropPercentInput = document.getElementById('sim-drop-percent');
   const runBtn = document.getElementById('run-sim-btn');
 
   const updateSim = () => {
-    const drops = parseInt(dropsInput.value, 10) || 5;
-    const hold = parseInt(holdInput.value, 10) || 15;
+    const dropPercent = parseFloat(dropPercentInput.value) || -1.5;
 
     // Run simulation
-    const simResults = runSimulation(mergedData, hold, drops);
+    const simResults = runSimulation(mergedData, dropPercent);
 
     const setStatValue = (id, value, color = null) => {
       const el = document.getElementById(id);
@@ -277,25 +275,34 @@ function renderSimulation(mergedData) {
       }
     };
 
+    // Strategy
     setStatValue('sim-final-capital', `R$ ${formatNumber(simResults.finalCapital, 2)}`);
-    
     const totalReturnEl = document.getElementById('sim-total-return');
     if (totalReturnEl) {
       totalReturnEl.textContent = formatPercent(simResults.totalReturnPercent);
       totalReturnEl.className = `metric-card__sub ${simResults.totalReturnPercent >= 0 ? 'positive' : 'negative'}`;
     }
 
-    setStatValue('sim-total-trades', simResults.totalTrades);
-    
-    const winRateColor = simResults.winRate >= 50 ? '#00ff88' : '#ff4757';
-    setStatValue('sim-win-rate', `${simResults.winRate.toFixed(1)}%`, winRateColor);
-    
-    setStatValue('sim-best-trade', `${simResults.bestTrade.toFixed(2)}%`, '#00ff88');
+    // Benchmark (Buy & Hold)
+    setStatValue('sim-bnh-capital', `R$ ${formatNumber(simResults.buyAndHoldFinal, 2)}`);
+    const bnhReturnEl = document.getElementById('sim-bnh-return');
+    if (bnhReturnEl) {
+      bnhReturnEl.textContent = formatPercent(simResults.buyAndHoldReturn);
+      bnhReturnEl.className = `metric-card__sub ${simResults.buyAndHoldReturn >= 0 ? 'positive' : 'negative'}`;
+    }
+
+    // Entry Date
+    if (simResults.entryDate) {
+      const dateStr = simResults.entryDate.toISOString().split('T')[0];
+      setStatValue('sim-entry-date', dateStr, '#00ff88');
+    } else {
+      setStatValue('sim-entry-date', 'Nenhum gatilho ativado', '#ff4757');
+    }
 
     // Update subtitle
     const subtitle = document.getElementById('sim-subtitle');
-    if(subtitle) {
-      subtitle.textContent = `Gatilho: Dólar caindo ${drops} dias seguidos | Retenção: ${hold} dias | Capital Inicial: R$ 10.000`;
+    if (subtitle) {
+      subtitle.textContent = `Gatilho: Dólar cair ${dropPercent}% em um dia | Hold: Perpétuo | Capital: R$ 10.000`;
     }
 
     // Draw equity curve
@@ -306,7 +313,7 @@ function renderSimulation(mergedData) {
   // Run once on load
   updateSim();
 
-  // Attach listener (ensure it's only attached once, or remove old ones)
+  // Attach listener
   runBtn.onclick = updateSim;
 }
 

@@ -24,12 +24,6 @@ export function createEquityChart(simResults) {
   const strategyData = simResults.equityCurve.map(d => d.capital);
   const buyAndHoldData = simResults.equityCurve.map(d => d.buyAndHoldCapital);
 
-  // Identify trade entry points for annotations
-  const entryPoints = simResults.trades.map(t => ({
-    x: t.entryDate,
-    y: strategyData[labels.indexOf(t.entryDate)] || t.entryPrice
-  }));
-
   equityChartInstance = new Chart(ctx, {
     type: 'line',
     data: {

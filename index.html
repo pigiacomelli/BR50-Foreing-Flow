@@ -168,12 +168,8 @@
                     </header>
                     <div class="card__body" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
                         <div class="header-controls__input">
-                            <label for="sim-drops" style="color:#8888a0; display:block; margin-bottom: 0.5rem; font-size: 0.85rem;">Quedas Consecutivas</label>
-                            <input type="number" id="sim-drops" value="5" min="1" max="10" style="width: 150px;">
-                        </div>
-                        <div class="header-controls__input">
-                            <label for="sim-hold" style="color:#8888a0; display:block; margin-bottom: 0.5rem; font-size: 0.85rem;">Dias de Retenção</label>
-                            <input type="number" id="sim-hold" value="15" min="1" max="90" style="width: 150px;">
+                            <label for="sim-drop-percent" style="color:#8888a0; display:block; margin-bottom: 0.5rem; font-size: 0.85rem;">Queda Diária do Dólar (%)</label>
+                            <input type="number" id="sim-drop-percent" value="-1.5" step="0.1" max="0" style="width: 200px;" aria-label="Porcentagem de queda do dólar">
                         </div>
                         <button type="button" id="run-sim-btn" class="header-controls__btn" style="height: 42px;">▶ Rodar Simulação</button>
                     </div>
@@ -181,21 +177,19 @@
 
                 <div class="metrics-row" style="margin-top: 1rem;">
                     <div class="metric-card">
-                        <span class="metric-card__label">Capital Final</span>
+                        <span class="metric-card__label">Estratégia: Capital Final</span>
                         <span id="sim-final-capital" class="metric-card__value">-</span>
                         <span id="sim-total-return" class="metric-card__sub">Retorno Total</span>
                     </div>
                     <div class="metric-card">
-                        <span class="metric-card__label">Total de Operações</span>
-                        <span id="sim-total-trades" class="metric-card__value">-</span>
+                        <span class="metric-card__label">Buy & Hold: Capital Final</span>
+                        <span id="sim-bnh-capital" class="metric-card__value">-</span>
+                        <span id="sim-bnh-return" class="metric-card__sub">Retorno Total</span>
                     </div>
                     <div class="metric-card">
-                        <span class="metric-card__label">Taxa de Acerto (Win Rate)</span>
-                        <span id="sim-win-rate" class="metric-card__value">-</span>
-                    </div>
-                    <div class="metric-card">
-                        <span class="metric-card__label">Melhor Trade</span>
-                        <span id="sim-best-trade" class="metric-card__value">-</span>
+                        <span class="metric-card__label">Data de Entrada no Mercado</span>
+                        <span id="sim-entry-date" class="metric-card__value">-</span>
+                        <span class="metric-card__sub">Após o 1º gatilho atingido</span>
                     </div>
                 </div>
 
