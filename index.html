@@ -190,13 +190,34 @@
 
             <!-- PHASE 3 -->
             <section id="phase3" class="tab-content" aria-labelledby="phase3">
-                <div class="simulation-placeholder">
+                <div class="metrics-row">
+                    <div class="metric-card">
+                        <span class="metric-card__label">Capital Final</span>
+                        <span id="sim-final-capital" class="metric-card__value">-</span>
+                        <span id="sim-total-return" class="metric-card__sub">Retorno Total</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-card__label">Total de Operações</span>
+                        <span id="sim-total-trades" class="metric-card__value">-</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-card__label">Taxa de Acerto (Win Rate)</span>
+                        <span id="sim-win-rate" class="metric-card__value">-</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-card__label">Melhor Trade</span>
+                        <span id="sim-best-trade" class="metric-card__value">-</span>
+                    </div>
+                </div>
+
+                <div class="chart-container">
                     <div class="card">
-                        <div class="card__body card__body--center">
-                            <div class="icon-placeholder" aria-hidden="true">🚧</div>
-                            <h3>Simulação em Desenvolvimento</h3>
-                            <p>As regras de simulação serão definidas após a validação das Fases 1 e 2.</p>
-                            <p>Regra prevista: análise do impacto de saída de dólar por N dias consecutivos.</p>
+                        <header class="card__header">
+                            <h2 class="card__title">Evolução do Patrimônio (Estratégia vs Buy & Hold)</h2>
+                            <p class="card__subtitle">Gatilho: Dólar caindo 5 dias seguidos | Capital Inicial: R$ 10.000</p>
+                        </header>
+                        <div class="card__body">
+                            <canvas id="equity-chart" aria-label="Gráfico de Evolução Patrimonial da Simulação"></canvas>
                         </div>
                     </div>
                 </div>

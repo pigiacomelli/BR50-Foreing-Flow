@@ -9,8 +9,9 @@ import { mergeByDate, formatNumber, formatPercent, formatDateBR } from './utils/
 import { createMainChart, createFlowChart, destroyCharts } from './charts/priceChart.js';
 import { createScatterChart, createLagChart, createRollingChart, destroyStatsCharts } from './charts/statsChart.js';
 import { createRatesChart, destroyRatesCharts } from './charts/ratesChart.js';
-import { createRatesChart, destroyRatesCharts } from './charts/ratesChart.js';
+import { createEquityChart, destroySimCharts } from './charts/simChart.js';
 import { runFullAnalysis, pearsonCorrelation } from './analysis/statistics.js';
+import { runSimulation } from './analysis/simulation.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
 let appState = {
@@ -130,6 +131,7 @@ async function loadData() {
     renderPhase1Charts(merged, marketResult.tickerInfo.name);
     renderPhase2(merged, appState.analysisResults);
     renderPhaseJuros(merged, marketResult.tickerInfo.name);
+    renderPhase3(merged);
 
     hideLoading();
     console.log('✅ Dashboard loaded successfully!');
@@ -252,6 +254,39 @@ function renderPhaseJuros(mergedData, indexName) {
   // Draw charts
   destroyRatesCharts();
   createRatesChart(mergedData, indexName);
+}
+
+// ── Phase 3: Simulation ────────────────────────────────────────────────────
+function renderPhase3(mergedData) {
+  // Run simulation with a 15-day hold period
+  const simResults = runSimulation(mergedData, 15);
+
+  const setStatValue = (id, value, color = null) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = value;
+      if (color) el.style.color = color;
+    }
+  };
+
+  setStatValue('sim-final-capital', `R$ ${formatNumber(simResults.finalCapital, 2)}`);
+  
+  const totalReturnEl = document.getElementById('sim-total-return');
+  if (totalReturnEl) {
+    totalReturnEl.textContent = formatPercent(simResults.totalReturnPercent);
+    totalReturnEl.className = `metric-card__sub ${simResults.totalReturnPercent >= 0 ? 'positive' : 'negative'}`;
+  }
+
+  setStatValue('sim-total-trades', simResults.totalTrades);
+  
+  const winRateColor = simResults.winRate >= 50 ? '#00ff88' : '#ff4757';
+  setStatValue('sim-win-rate', `${simResults.winRate.toFixed(1)}%`, winRateColor);
+  
+  setStatValue('sim-best-trade', `${simResults.bestTrade.toFixed(2)}%`, '#00ff88');
+
+  // Draw equity curve
+  destroySimCharts();
+  createEquityChart(simResults);
 }
 
 // ── Initialize Application ─────────────────────────────────────────────────
