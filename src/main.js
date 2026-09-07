@@ -9,6 +9,7 @@ import { mergeByDate, formatNumber, formatPercent, formatDateBR } from './utils/
 import { createMainChart, createFlowChart, destroyCharts } from './charts/priceChart.js';
 import { createScatterChart, createLagChart, createRollingChart, destroyStatsCharts } from './charts/statsChart.js';
 import { createRatesChart, destroyRatesCharts } from './charts/ratesChart.js';
+import { createCurveChart, destroyCurveChart } from './charts/curveChart.js';
 import { runFullAnalysis, pearsonCorrelation } from './analysis/statistics.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -248,9 +249,12 @@ function renderPhaseJuros(mergedData, indexName) {
     jurosCorrEl.style.color = corr < 0 ? '#ff4757' : '#00ff88';
   }
 
-  // Draw chart
+  // Draw charts
   destroyRatesCharts();
   createRatesChart(mergedData, indexName);
+  
+  // Render TV Yield Curve asynchronously
+  createCurveChart();
 }
 
 // ── Initialize Application ─────────────────────────────────────────────────

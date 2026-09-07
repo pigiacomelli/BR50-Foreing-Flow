@@ -186,6 +186,21 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- NOVO: Curva de Juros Transversal (TradingView) -->
+                <div class="chart-container">
+                    <div class="card">
+                        <header class="card__header">
+                            <h2 class="card__title">Curva de Juros Futuros Atual (ETTJ)</h2>
+                            <p class="card__subtitle">Estrutura a termo extraída em tempo real via TradingView (1m até 10 anos).</p>
+                        </header>
+                        <div class="card__body" style="position: relative;">
+                            <div id="curve-loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00d4ff;">Buscando dados ao vivo do TradingView...</div>
+                            <div id="curve-error" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ff4757; display: none;"></div>
+                            <canvas id="curve-chart" aria-label="Gráfico da Curva de Juros Atual"></canvas>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- PHASE 3 -->

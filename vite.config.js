@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite';
+import tvPlugin from './src/server/tvPlugin.js';
 
 export default defineConfig({
+  plugins: [tvPlugin()],
   server: {
     port: 3000,
     open: true,
