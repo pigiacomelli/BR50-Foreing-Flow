@@ -8,13 +8,13 @@ export function destroyRatesCharts() {
 }
 
 /**
- * Creates the main dual-axis chart comparing Market Index with Selic Rate
+ * Creates the main dual-axis chart comparing Market Index with Juros Futuros Proxy
  */
 export function createRatesChart(mergedData, indexName) {
   const ctx = document.getElementById('rates-chart');
   if (!ctx) return;
 
-  const validData = mergedData.filter(d => d.selicRate !== null);
+  const validData = mergedData.filter(d => d.jurosClose !== null);
 
   ratesChartInstance = new Chart(ctx, {
     type: 'line',
@@ -33,8 +33,8 @@ export function createRatesChart(mergedData, indexName) {
           pointHitRadius: 10,
         },
         {
-          label: 'Taxa Selic (%)',
-          data: validData.map(d => d.selicRate),
+          label: 'Curva de Juros (IRFM11)',
+          data: validData.map(d => d.jurosClose),
           borderColor: '#ffa502', // gold
           backgroundColor: 'transparent',
           borderWidth: 2,
@@ -69,7 +69,7 @@ export function createRatesChart(mergedData, indexName) {
               if (context.datasetIndex === 0) {
                 label += new Intl.NumberFormat('pt-BR').format(context.parsed.y) + ' pts';
               } else {
-                label += context.parsed.y.toFixed(2) + '%';
+                label += 'R$ ' + context.parsed.y.toFixed(2);
               }
               return label;
             }

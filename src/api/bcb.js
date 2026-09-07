@@ -183,21 +183,4 @@ export function calculateDailyChanges(series) {
   });
 }
 
-/**
- * Fetch Selic daily rate (SGS 11)
- * @param {string} startDate - Start date (YYYY-MM-DD)
- * @param {string} endDate - End date (YYYY-MM-DD)
- * @returns {Promise<Array<{date: Date, value: number}>>}
- */
-export async function fetchSelic(startDate, endDate) {
-  try {
-    console.log('📡 Fetching Selic from BCB SGS API...');
-    const data = await fetchFromSGS(11, startDate, endDate);
-    console.log(`✓ Selic SGS: ${data.length} data points`);
-    return data;
-  } catch (error) {
-    console.warn('SGS API failed for Selic:', error.message);
-    throw new Error('Não foi possível obter a Taxa Selic do Banco Central.');
-  }
-}
 

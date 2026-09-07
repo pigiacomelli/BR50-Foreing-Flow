@@ -120,3 +120,36 @@ export function calculateReturns(data) {
     return { ...item, dailyReturn };
   });
 }
+
+/**
+ * Fetch Juros Futuros proxy (IRFM11 - ETF de Renda Fixa Prefixada)
+ * Quando a expectativa de juros futuros sobe, este ETF cai (marcação a mercado)
+ * @param {string} startDate 
+ * @param {string} endDate 
+ */
+export async function fetchJurosFuturos(startDate, endDate) {
+  const period1 = dateToUnix(startDate);
+  const period2 = dateToUnix(endDate);
+  const ticker = 'IRFM11.SA';
+
+  console.log(`Trying ticker: ${ticker} (Juros Futuros Proxy)...`);
+  const url = `${YAHOO_PROXY_PATH}/${encodeURIComponent(ticker)}?period1=${period1}&period2=${period2}&interval=1d&includePrePost=false`;
+
+  const response = await fetch(url, {
+    signal: AbortSignal.timeout(20000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  const parsed = parseYahooResponse(data);
+
+  if (parsed.length > 0) {
+    console.log(`✓ Success: ${ticker} — ${parsed.length} data points`);
+    return parsed;
+  }
+
+  throw new Error('Não foi possível obter dados de Juros Futuros.');
+}

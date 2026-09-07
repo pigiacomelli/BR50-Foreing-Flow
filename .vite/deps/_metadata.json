@@ -1,0 +1,43 @@
+{
+  "hash": "9169be97",
+  "configHash": "cdfc9fc7",
+  "lockfileHash": "5f287dcf",
+  "browserHash": "2753916b",
+  "optimized": {
+    "chart.js": {
+      "src": "../../node_modules/chart.js/dist/chart.js",
+      "file": "chart__js.js",
+      "fileHash": "7a7e1403",
+      "needsInterop": false
+    },
+    "chartjs-adapter-date-fns": {
+      "src": "../../node_modules/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.esm.js",
+      "file": "chartjs-adapter-date-fns.js",
+      "fileHash": "b1c1d80e",
+      "needsInterop": false
+    },
+    "date-fns/locale": {
+      "src": "../../node_modules/date-fns/locale.mjs",
+      "file": "date-fns_locale.js",
+      "fileHash": "97f9b1a7",
+      "needsInterop": false
+    },
+    "chart.js/auto": {
+      "src": "../../node_modules/chart.js/auto/auto.js",
+      "file": "chart__js_auto.js",
+      "fileHash": "dc2afd04",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-LCSWDOYW": {
+      "file": "chunk-LCSWDOYW.js"
+    },
+    "chunk-B47MVASB": {
+      "file": "chunk-B47MVASB.js"
+    },
+    "chunk-V6TY7KAL": {
+      "file": "chunk-V6TY7KAL.js"
+    }
+  }
+}

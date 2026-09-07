@@ -166,8 +166,8 @@
             <section id="phase-juros" class="tab-content" aria-labelledby="phase-juros">
                 <div class="metrics-row" style="grid-template-columns: repeat(2, 1fr);">
                     <div class="metric-card">
-                        <span class="metric-card__label">Taxa Selic Atual</span>
-                        <span id="metric-selic-rate" class="metric-card__value">-</span>
+                        <span class="metric-card__label">IRFM11 Atual (Proxy Juros)</span>
+                        <span id="metric-juros-rate" class="metric-card__value">-</span>
                     </div>
                     <div class="metric-card">
                         <span class="metric-card__label">Correlação (Pearson)</span>
@@ -178,8 +178,8 @@
                 <div class="chart-container">
                     <div class="card">
                         <header class="card__header">
-                            <h2 class="card__title">IBrX-50 vs Taxa Selic (Proxy de Juros)</h2>
-                            <p class="card__subtitle">A correlação costuma ser negativa: juros subindo pressionam a bolsa para baixo.</p>
+                            <h2 class="card__title">IBrX-50 vs Juros Futuros Prefixados (IRFM11)</h2>
+                            <p class="card__subtitle">A correlação costuma ser positiva no gráfico porque o IRFM11 já reflete os juros de forma invertida (se os juros sobem, o ETF e a Bolsa caem juntos).</p>
                         </header>
                         <div class="card__body">
                             <canvas id="rates-chart" aria-label="Gráfico de Juros vs Bolsa"></canvas>

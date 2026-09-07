@@ -76,19 +76,19 @@ export function dateKey(date) {
  * Only returns dates present in both series
  * @param {Array} marketData - Market data array [{date, close, dailyReturn, ...}]
  * @param {Array} exchangeData - Exchange rate data [{date, value, change, changePercent}]
- * @param {Array} selicData - Selic rate data [{date, value}] (optional)
+ * @param {Array} jurosData - Juros Futuros proxy data [{date, close}] (optional)
  * @returns {Array} Merged data
  */
-export function mergeByDate(marketData, exchangeData, selicData = []) {
+export function mergeByDate(marketData, exchangeData, jurosData = []) {
   // Create lookup from exchange data
   const exchangeMap = new Map();
   for (const item of exchangeData) {
     exchangeMap.set(dateKey(item.date), item);
   }
-  // Create lookup from selic data
-  const selicMap = new Map();
-  for (const item of selicData) {
-    selicMap.set(dateKey(item.date), item);
+  // Create lookup from juros data
+  const jurosMap = new Map();
+  for (const item of jurosData) {
+    jurosMap.set(dateKey(item.date), item);
   }
 
   const merged = [];
@@ -96,9 +96,9 @@ export function mergeByDate(marketData, exchangeData, selicData = []) {
     const key = dateKey(market.date);
     const exchange = exchangeMap.get(key);
     
-    // We only strictly require market and exchange. Selic can be null for a day.
+    // We only strictly require market and exchange. Juros can be null for a day.
     if (exchange) {
-      const selic = selicMap.get(key);
+      const juros = jurosMap.get(key);
       merged.push({
         date: market.date,
         dateStr: key,
@@ -115,8 +115,8 @@ export function mergeByDate(marketData, exchangeData, selicData = []) {
         usdBrlChangePercent: exchange.changePercent || 0,
         // Dollar flow proxy (inverted: positive = inflow/BRL strengthening)
         dollarFlowProxy: -(exchange.changePercent || 0),
-        // Selic rate
-        selicRate: selic ? selic.value : null,
+        // Juros Futuros proxy (IRFM11)
+        jurosClose: juros ? juros.close : null,
       });
     }
   }

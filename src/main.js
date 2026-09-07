@@ -3,8 +3,8 @@
  * Orchestrates data loading, chart rendering, and UI interactions
  */
 import './style.css';
-import { fetchPTAX, calculateDailyChanges, fetchSelic } from './api/bcb.js';
-import { fetchMarketData, calculateReturns } from './api/market.js';
+import { fetchPTAX, calculateDailyChanges } from './api/bcb.js';
+import { fetchMarketData, calculateReturns, fetchJurosFuturos } from './api/market.js';
 import { mergeByDate, formatNumber, formatPercent, formatDateBR } from './utils/helpers.js';
 import { createMainChart, createFlowChart, destroyCharts } from './charts/priceChart.js';
 import { createScatterChart, createLagChart, createRollingChart, destroyStatsCharts } from './charts/statsChart.js';
@@ -97,10 +97,10 @@ async function loadData() {
     console.log(`📊 Loading data from ${startDate} to ${endDate}...`);
 
     // Fetch data in parallel
-    const [marketResult, ptaxRaw, selicRaw] = await Promise.all([
+    const [marketResult, ptaxRaw, jurosRaw] = await Promise.all([
       fetchMarketData(startDate, endDate),
       fetchPTAX(startDate, endDate),
-      fetchSelic(startDate, endDate),
+      fetchJurosFuturos(startDate, endDate),
     ]);
 
     console.log(`✓ Market data: ${marketResult.data.length} points (${marketResult.tickerInfo.name})`);
@@ -111,7 +111,7 @@ async function loadData() {
     const ptaxWithChanges = calculateDailyChanges(ptaxRaw);
 
     // Merge by date
-    const merged = mergeByDate(marketWithReturns, ptaxWithChanges, selicRaw);
+    const merged = mergeByDate(marketWithReturns, ptaxWithChanges, jurosRaw);
     console.log(`✓ Merged data: ${merged.length} common trading days`);
 
     if (merged.length < 10) {
@@ -223,28 +223,26 @@ function renderPhase2(mergedData, results) {
 
 // ── Phase Juros: Interest Rates ────────────────────────────────────────────
 function renderPhaseJuros(mergedData, indexName) {
-  // Extract data with valid selic
-  const validData = mergedData.filter(d => d.selicRate !== null);
+  // Extract data with valid juros
+  const validData = mergedData.filter(d => d.jurosClose !== null);
   if (validData.length === 0) return;
 
   const latest = validData[validData.length - 1];
 
   // Update stat cards
-  const selicRateEl = document.getElementById('metric-selic-rate');
-  if (selicRateEl) {
-    selicRateEl.textContent = `${latest.selicRate.toFixed(2)}% a.a.`;
+  const jurosRateEl = document.getElementById('metric-juros-rate');
+  if (jurosRateEl) {
+    jurosRateEl.textContent = `R$ ${latest.jurosClose.toFixed(2)}`;
   }
 
   const jurosCorrEl = document.getElementById('metric-juros-corr');
   if (jurosCorrEl) {
-    // Calculate correlation between index returns and selic changes
-    // Not exact, but let's do a simple correlation of the levels since we want to show the inverted relationship
-    // It's technically better to correlate returns with rate changes, but levels show the visual story well
+    // Calculate correlation between index returns and Juros levels
     const indexPrices = validData.map(d => d.indexClose);
-    const selicRates = validData.map(d => d.selicRate);
+    const jurosRates = validData.map(d => d.jurosClose);
     
     // We already have pearson function, let's use it
-    const corr = pearsonCorrelation(selicRates, indexPrices);
+    const corr = pearsonCorrelation(jurosRates, indexPrices);
     
     jurosCorrEl.textContent = formatNumber(corr, 4);
     jurosCorrEl.style.color = corr < 0 ? '#ff4757' : '#00ff88';
