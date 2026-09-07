@@ -107,30 +107,51 @@ async function fetchFromOlinda(startDate, endDate) {
 
 /**
  * Fetch data from SGS API (fallback method)
+ * Fetches in yearly chunks to avoid API limits (406 errors)
  */
 async function fetchFromSGS(seriesCode, startDate, endDate) {
-  const start = formatDateSGS(startDate);
-  const end = formatDateSGS(endDate);
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  let allData = [];
 
-  const url = `${BCB_SGS_URL}.${seriesCode}/dados?formato=json&dataInicial=${start}&dataFinal=${end}`;
+  let chunkStart = new Date(start);
+  while (chunkStart < end) {
+    let chunkEnd = new Date(chunkStart.getFullYear() + 1, chunkStart.getMonth(), chunkStart.getDate());
+    if (chunkEnd > end) chunkEnd = end;
 
-  const response = await fetch(url, {
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-    },
-  });
+    const startParam = formatDateSGS(chunkStart.toISOString().split('T')[0]);
+    const endParam = formatDateSGS(chunkEnd.toISOString().split('T')[0]);
 
-  if (!response.ok) {
-    throw new Error(`SGS API error: ${response.status}`);
+    const url = `${BCB_SGS_URL}.${seriesCode}/dados?formato=json&dataInicial=${startParam}&dataFinal=${endParam}`;
+    console.log(`  BCB SGS ${seriesCode}: fetching ${chunkStart.getFullYear()}...`);
+
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 406) {
+        console.warn(`SGS API returned 406 for ${chunkStart.getFullYear()}, maybe no data for this period.`);
+      } else {
+        throw new Error(`SGS API error: ${response.status}`);
+      }
+    } else {
+      const data = await response.json();
+      const parsedData = data.map(item => ({
+        date: parseSGSDate(item.data),
+        value: parseFloat(item.valor),
+      })).filter(item => !isNaN(item.value));
+      
+      allData = allData.concat(parsedData);
+    }
+    
+    chunkStart = chunkEnd;
   }
 
-  const data = await response.json();
-
-  return data.map(item => ({
-    date: parseSGSDate(item.data),
-    value: parseFloat(item.valor),
-  })).filter(item => !isNaN(item.value));
+  return allData.sort((a, b) => a.date - b.date);
 }
 
 /**
