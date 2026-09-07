@@ -11,9 +11,10 @@
  * 
  * @param {Array} data - The merged market data.
  * @param {number} holdPeriod - Number of days to hold the asset before selling.
+ * @param {number} consecutiveDropsTarget - The required number of consecutive drops to trigger a buy.
  * @returns {Object} Simulation results including trades and equity curve.
  */
-export function runSimulation(data, holdPeriod = 15) {
+export function runSimulation(data, holdPeriod = 15, consecutiveDropsTarget = 5) {
   const trades = [];
   const initialCapital = 10000; // R$ 10,000 starting capital
   let currentCapital = initialCapital;
@@ -47,9 +48,9 @@ export function runSimulation(data, holdPeriod = 15) {
       consecutiveDrops = 0;
     }
 
-    // Is there a trigger? (5 consecutive drops)
+    // Is there a trigger? (N consecutive drops)
     // We also make sure we have enough days left to hold the position
-    if (consecutiveDrops === 5 && i + holdPeriod < data.length) {
+    if (consecutiveDrops >= consecutiveDropsTarget && i + holdPeriod < data.length) {
       // Trigger buy!
       const entryDay = today;
       const exitDay = data[i + holdPeriod];

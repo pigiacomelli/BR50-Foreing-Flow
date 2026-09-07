@@ -131,7 +131,7 @@ async function loadData() {
     renderPhase1Charts(merged, marketResult.tickerInfo.name);
     renderPhase2(merged, appState.analysisResults);
     renderPhaseJuros(merged, marketResult.tickerInfo.name);
-    renderPhase3(merged);
+    renderSimulation(merged);
 
     hideLoading();
     console.log('✅ Dashboard loaded successfully!');
@@ -256,37 +256,58 @@ function renderPhaseJuros(mergedData, indexName) {
   createRatesChart(mergedData, indexName);
 }
 
-// ── Phase 3: Simulation ────────────────────────────────────────────────────
-function renderPhase3(mergedData) {
-  // Run simulation with a 15-day hold period
-  const simResults = runSimulation(mergedData, 15);
+// ── Simulation (Integrated in Phase 2) ─────────────────────────────────────
+function renderSimulation(mergedData) {
+  const dropsInput = document.getElementById('sim-drops');
+  const holdInput = document.getElementById('sim-hold');
+  const runBtn = document.getElementById('run-sim-btn');
 
-  const setStatValue = (id, value, color = null) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.textContent = value;
-      if (color) el.style.color = color;
+  const updateSim = () => {
+    const drops = parseInt(dropsInput.value, 10) || 5;
+    const hold = parseInt(holdInput.value, 10) || 15;
+
+    // Run simulation
+    const simResults = runSimulation(mergedData, hold, drops);
+
+    const setStatValue = (id, value, color = null) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.textContent = value;
+        if (color) el.style.color = color;
+      }
+    };
+
+    setStatValue('sim-final-capital', `R$ ${formatNumber(simResults.finalCapital, 2)}`);
+    
+    const totalReturnEl = document.getElementById('sim-total-return');
+    if (totalReturnEl) {
+      totalReturnEl.textContent = formatPercent(simResults.totalReturnPercent);
+      totalReturnEl.className = `metric-card__sub ${simResults.totalReturnPercent >= 0 ? 'positive' : 'negative'}`;
     }
+
+    setStatValue('sim-total-trades', simResults.totalTrades);
+    
+    const winRateColor = simResults.winRate >= 50 ? '#00ff88' : '#ff4757';
+    setStatValue('sim-win-rate', `${simResults.winRate.toFixed(1)}%`, winRateColor);
+    
+    setStatValue('sim-best-trade', `${simResults.bestTrade.toFixed(2)}%`, '#00ff88');
+
+    // Update subtitle
+    const subtitle = document.getElementById('sim-subtitle');
+    if(subtitle) {
+      subtitle.textContent = `Gatilho: Dólar caindo ${drops} dias seguidos | Retenção: ${hold} dias | Capital Inicial: R$ 10.000`;
+    }
+
+    // Draw equity curve
+    destroySimCharts();
+    createEquityChart(simResults);
   };
 
-  setStatValue('sim-final-capital', `R$ ${formatNumber(simResults.finalCapital, 2)}`);
-  
-  const totalReturnEl = document.getElementById('sim-total-return');
-  if (totalReturnEl) {
-    totalReturnEl.textContent = formatPercent(simResults.totalReturnPercent);
-    totalReturnEl.className = `metric-card__sub ${simResults.totalReturnPercent >= 0 ? 'positive' : 'negative'}`;
-  }
+  // Run once on load
+  updateSim();
 
-  setStatValue('sim-total-trades', simResults.totalTrades);
-  
-  const winRateColor = simResults.winRate >= 50 ? '#00ff88' : '#ff4757';
-  setStatValue('sim-win-rate', `${simResults.winRate.toFixed(1)}%`, winRateColor);
-  
-  setStatValue('sim-best-trade', `${simResults.bestTrade.toFixed(2)}%`, '#00ff88');
-
-  // Draw equity curve
-  destroySimCharts();
-  createEquityChart(simResults);
+  // Attach listener (ensure it's only attached once, or remove old ones)
+  runBtn.onclick = updateSim;
 }
 
 // ── Initialize Application ─────────────────────────────────────────────────

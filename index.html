@@ -50,9 +50,8 @@
         <!-- 4. TAB NAVIGATION -->
         <nav class="tabs" aria-label="Navegação de fases">
             <button type="button" class="tabs__btn tab-btn active" data-tab="phase1" aria-selected="true">📈 Visualização</button>
-            <button type="button" class="tabs__btn tab-btn" data-tab="phase2" aria-selected="false">📊 Estatísticas</button>
+            <button type="button" class="tabs__btn tab-btn" data-tab="phase2" aria-selected="false">📊 Estatísticas & Backtest</button>
             <button type="button" class="tabs__btn tab-btn" data-tab="phase-juros" aria-selected="false">🏦 Juros (Selic)</button>
-            <button type="button" class="tabs__btn tab-btn" data-tab="phase3" aria-selected="false">🎯 Simulação</button>
         </nav>
 
         <!-- 5. TAB CONTENT PANELS -->
@@ -160,37 +159,27 @@
                         </div>
                     </div>
                 </div>
-            </section>
 
-            <!-- PHASE JUROS -->
-            <section id="phase-juros" class="tab-content" aria-labelledby="phase-juros">
-                <div class="metrics-row" style="grid-template-columns: repeat(2, 1fr);">
-                    <div class="metric-card">
-                        <span class="metric-card__label">Taxa Selic Atual</span>
-                        <span id="metric-juros-rate" class="metric-card__value">-</span>
-                    </div>
-                    <div class="metric-card">
-                        <span class="metric-card__label">Correlação (Pearson)</span>
-                        <span id="metric-juros-corr" class="metric-card__value">-</span>
-                    </div>
-                </div>
-
-                <div class="chart-container">
-                    <div class="card">
-                        <header class="card__header">
-                            <h2 class="card__title">IBrX-50 vs Taxa Selic (Série 11)</h2>
-                            <p class="card__subtitle">Acompanhe como a bolsa reage aos ciclos de alta e baixa da Selic.</p>
-                        </header>
-                        <div class="card__body">
-                            <canvas id="rates-chart" aria-label="Gráfico de Juros vs Bolsa"></canvas>
+                <!-- CONTROLES DA SIMULAÇÃO -->
+                <div class="card" style="margin-top: 2rem;">
+                    <header class="card__header">
+                        <h2 class="card__title">🎯 Simulação de Investimentos (Backtest)</h2>
+                        <p class="card__subtitle">Ajuste os parâmetros da estratégia (entrada de Dólar) e veja o resultado.</p>
+                    </header>
+                    <div class="card__body" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                        <div class="header-controls__input">
+                            <label for="sim-drops" style="color:#8888a0; display:block; margin-bottom: 0.5rem; font-size: 0.85rem;">Quedas Consecutivas</label>
+                            <input type="number" id="sim-drops" value="5" min="1" max="10" style="width: 150px;">
                         </div>
+                        <div class="header-controls__input">
+                            <label for="sim-hold" style="color:#8888a0; display:block; margin-bottom: 0.5rem; font-size: 0.85rem;">Dias de Retenção</label>
+                            <input type="number" id="sim-hold" value="15" min="1" max="90" style="width: 150px;">
+                        </div>
+                        <button type="button" id="run-sim-btn" class="header-controls__btn" style="height: 42px;">▶ Rodar Simulação</button>
                     </div>
                 </div>
-            </section>
 
-            <!-- PHASE 3 -->
-            <section id="phase3" class="tab-content" aria-labelledby="phase3">
-                <div class="metrics-row">
+                <div class="metrics-row" style="margin-top: 1rem;">
                     <div class="metric-card">
                         <span class="metric-card__label">Capital Final</span>
                         <span id="sim-final-capital" class="metric-card__value">-</span>
@@ -214,10 +203,36 @@
                     <div class="card">
                         <header class="card__header">
                             <h2 class="card__title">Evolução do Patrimônio (Estratégia vs Buy & Hold)</h2>
-                            <p class="card__subtitle">Gatilho: Dólar caindo 5 dias seguidos | Capital Inicial: R$ 10.000</p>
+                            <p class="card__subtitle" id="sim-subtitle">Capital Inicial: R$ 10.000</p>
                         </header>
                         <div class="card__body">
                             <canvas id="equity-chart" aria-label="Gráfico de Evolução Patrimonial da Simulação"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PHASE JUROS -->
+            <section id="phase-juros" class="tab-content" aria-labelledby="phase-juros">
+                <div class="metrics-row" style="grid-template-columns: repeat(2, 1fr);">
+                    <div class="metric-card">
+                        <span class="metric-card__label">Taxa Selic Atual</span>
+                        <span id="metric-juros-rate" class="metric-card__value">-</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-card__label">Correlação (Pearson)</span>
+                        <span id="metric-juros-corr" class="metric-card__value">-</span>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="card">
+                        <header class="card__header">
+                            <h2 class="card__title">IBrX-50 vs Taxa Selic (Série 11)</h2>
+                            <p class="card__subtitle">Acompanhe como a bolsa reage aos ciclos de alta e baixa da Selic.</p>
+                        </header>
+                        <div class="card__body">
+                            <canvas id="rates-chart" aria-label="Gráfico de Juros vs Bolsa"></canvas>
                         </div>
                     </div>
                 </div>
