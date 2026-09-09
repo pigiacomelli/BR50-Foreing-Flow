@@ -1,76 +1,75 @@
-# 💱 IBrX-50 vs Fluxo de Dólar (BR50-Foreign-Flow)
+# 💱 IBrX-50 vs Foreign Exchange Flow (BR50-Foreign-Flow)
 
 ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)
 ![Vite](https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white)
 ![Chart.js](https://img.shields.io/badge/chart.js-F5788D.svg?style=for-the-badge&logo=chart.js&logoColor=white)
 
-Um estudo visual interativo para analisar o impacto do fluxo cambial (entrada e saída de dólares) no mercado brasileiro de ações, especificamente o índice **IBrX-50**, e na política monetária nacional (Taxa Selic).
+An interactive visual study to analyze the impact of foreign exchange flow (USD inflow/outflow) on the Brazilian stock market, specifically the **IBrX-50** index.
 
-O projeto consome dados reais da API do **Banco Central do Brasil (SGS e OLINDA)** e do **Yahoo Finance** para traçar correlações matemáticas e até mesmo um simulador interativo de carteira baseado em *Market Timing*.
-
----
-
-## 🎯 Objetivo do Projeto
-
-A hipótese principal testada por esta aplicação é: 
-**A variação da cotação do Dólar (BRL/USD) impacta diretamente o IBrX-50 e vice-versa?**
-
-Para testar isso, a aplicação conta com três painéis analíticos:
-1. **Visualização Histórica:** Gráficos interativos mostrando a variação diária do câmbio e a evolução do IBrX-50 ao longo do tempo.
-2. **Estatísticas & Backtest:** 
-    - Painel com estatísticas estatísticas profundas como *Correlação de Pearson/Spearman*, Regressão (Beta e R²), Lag Correlation (D-1 a D-10) e Rolling Correlation (30 a 90 dias).
-    - **Simulador Interativo:** Testa um cenário onde você investe 100% de um capital (R$ 10.000) no índice apenas nos momentos de grande queda do Dólar (proxy de forte fluxo estrangeiro) e compara o resultado final contra o clássico *Buy & Hold*.
-3. **Juros (Selic):** Uma aba focada na comparação entre os ciclos de alta e baixa de juros e a reação do mercado de capitais no longo prazo.
+The project consumes real data from the **Central Bank of Brazil (BCB OLINDA/SGS)** and **Yahoo Finance** APIs to plot mathematical correlations and run an interactive portfolio simulator based on *Market Timing*.
 
 ---
 
-## 🛠️ Tecnologias e Arquitetura
+## 🎯 Project Goal
 
-- **Vanilla JavaScript & HTML/CSS**: Nenhuma UI library (React/Vue) foi utilizada, extraindo o máximo de performance e modularidade nativa usando módulos ES6.
-- **Vite**: Usado para servir a aplicação durante o desenvolvimento e orquestrar proxies (evitando erros de CORS ao consumir APIs do BCB/Yahoo).
-- **Chart.js**: Renderização dos gráficos de linha, dispersão (scatter) e barras com altíssimo desempenho.
-- **Banco Central do Brasil (BCB) API**: Puxa a série 11 (Selic) e a PTAX (Câmbio) de forma fatiada.
-- **Yahoo Finance API**: Puxa a série histórica do `^IBX50` ou proxies disponíveis via proxy local.
+The main hypothesis tested by this application is: 
+**Does the variation in the USD/BRL exchange rate directly impact the IBrX-50 index and vice-versa?**
 
-### Estrutura de Diretórios
+To test this, the application features two main analytical dashboards:
+1. **Historical Visualization:** Interactive charts showing the daily exchange rate variation and the evolution of the IBrX-50 over time.
+2. **Statistics & Backtest:** 
+    - A panel with in-depth statistical metrics such as *Pearson/Spearman Correlation*, Regression (Beta and R²), Lag Correlation (D-1 to D-10), and Rolling Correlation (30 to 90 days).
+    - **Interactive Simulator:** Tests a scenario where you invest 100% of a starting capital (e.g., R$ 10,000) in the index *only* on days of significant USD drops (a proxy for strong foreign capital inflow) and compares the final result against a classic *Buy & Hold* strategy.
+
+---
+
+## 🛠️ Technologies & Architecture
+
+- **Vanilla JavaScript & HTML/CSS**: No UI libraries (like React/Vue) were used, extracting maximum performance and native modularity using ES6 modules.
+- **Vite**: Used to serve the application during development and orchestrate proxies (bypassing CORS errors when consuming the BCB/Yahoo APIs).
+- **Chart.js**: High-performance rendering of line, scatter, and bar charts.
+- **Central Bank of Brazil (BCB) API**: Fetches the PTAX (Exchange Rate) data in sliced yearly chunks.
+- **Yahoo Finance API**: Fetches the historical series for `^IBX50` or available proxies via a local proxy.
+
+### Directory Structure
 ```bash
 /src
- ├── /analysis     # Lógica matemática (Regressões, Pearson, Motor de Backtest)
- ├── /api          # Clientes para o Yahoo Finance e BCB (OLINDA/SGS)
- ├── /charts       # Instâncias do Chart.js para cada painel
- ├── /utils        # Helpers (Formatações e merge de dados em O(n))
- └── main.js       # Orquestrador da aplicação
+ ├── /analysis     # Mathematical logic (Regressions, Pearson, Backtest Engine)
+ ├── /api          # Clients for Yahoo Finance and BCB (OLINDA/SGS)
+ ├── /charts       # Chart.js instances for each panel
+ ├── /utils        # Helpers (Formatting and O(n) data merging)
+ └── main.js       # Application orchestrator
 ```
 
 ---
 
-## 🚀 Como Rodar Localmente
+## 🚀 How to Run Locally
 
-Certifique-se de ter o **Node.js** instalado na sua máquina (v16+).
+Ensure you have **Node.js** installed on your machine (v16+).
 
-1. Clone o repositório:
+1. Clone the repository:
 ```bash
 git clone https://github.com/pigiacomelli/BR50-Foreing-Flow.git
 cd BR50-Foreing-Flow
 ```
 
-2. Instale as dependências (apenas Vite e Chart.js):
+2. Install the dependencies (only Vite and Chart.js):
 ```bash
 npm install
 ```
 
-3. Inicie o servidor de desenvolvimento:
+3. Start the development server:
 ```bash
 npm run dev
 ```
 
-4. Abra `http://localhost:3000` no seu navegador!
+4. Open `http://localhost:3000` in your browser!
 
 ---
 
-## 📈 Preview do Backtest (Market Timing)
-No simulador (aba *Estatísticas & Backtest*), você pode estipular uma regra como: **"Comprar sempre que o Dólar cair -1.5% em um único dia"**. A aplicação fará a varredura nos últimos 15 anos, fará a compra teórica e plotará na sua tela um gráfico comparativo (*Equity Curve*) de como o seu dinheiro teria se saído contra o mercado.
+## 📈 Backtest Preview (Market Timing)
+In the simulator (under the *Statistics & Backtest* tab), you can set a rule such as: **"Buy whenever the USD drops by -1.5% in a single day"**. The application will scan the last 15 years, execute the theoretical purchase, and plot a comparative *Equity Curve* showing how your money would have performed against the market.
 
 ---
 
-> Desenvolvido com ☕ e muito Vanilla JS.
+> Developed with ☕ and a lot of Vanilla JS.
