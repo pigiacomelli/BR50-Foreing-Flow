@@ -29,7 +29,7 @@ export function stddev(arr) {
  */
 export function pearsonCorrelation(x, y) {
   const n = Math.min(x.length, y.length);
-  if (n < 3) return 0;
+  if (n < 3) return null;
 
   const mx = mean(x.slice(0, n));
   const my = mean(y.slice(0, n));
@@ -44,7 +44,7 @@ export function pearsonCorrelation(x, y) {
   }
 
   const denom = Math.sqrt(sumX2 * sumY2);
-  if (denom === 0) return 0;
+  if (denom === 0) return null;
   return sumXY / denom;
 }
 
@@ -56,7 +56,7 @@ export function pearsonCorrelation(x, y) {
  */
 export function spearmanCorrelation(x, y) {
   const n = Math.min(x.length, y.length);
-  if (n < 3) return 0;
+  if (n < 3) return null;
 
   const rankX = calculateRanks(x.slice(0, n));
   const rankY = calculateRanks(y.slice(0, n));
@@ -138,107 +138,45 @@ export function linearRegression(x, y) {
  * @returns {Array<{lag: number, correlation: number}>}
  */
 export function lagCorrelation(x, y, maxLag = 10) {
-  const results = [];
-
-  for (let lag = 0; lag <= maxLag; lag++) {
-    const xSlice = x.slice(0, x.length - lag);
-    const ySlice = y.slice(lag);
-    const n = Math.min(xSlice.length, ySlice.length);
-
-    if (n < 10) {
-      results.push({ lag, correlation: 0 });
-      continue;
-    }
-
-    const corr = pearsonCorrelation(xSlice.slice(0, n), ySlice.slice(0, n));
-    results.push({ lag, correlation: corr });
-  }
-
-  return results;
+  return Array.from({ length: maxLag + 1 }, (_, lag) => {
+    const pairs = x.slice(0, x.length - lag).map((value, i) => [value, y[i + lag]])
+      .filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b));
+    return { lag, count: pairs.length, correlation: pairs.length >= 10
+      ? pearsonCorrelation(pairs.map(p => p[0]), pairs.map(p => p[1])) : null };
+  });
 }
 
-/**
- * Calculate rolling (windowed) correlation
- * @param {number[]} x - First array
- * @param {number[]} y - Second array
- * @param {number} window - Window size
- * @returns {Array<{index: number, correlation: number}>}
- */
 export function rollingCorrelation(x, y, window) {
   const results = [];
-  const n = Math.min(x.length, y.length);
-
-  for (let i = window - 1; i < n; i++) {
-    const xWindow = x.slice(i - window + 1, i + 1);
-    const yWindow = y.slice(i - window + 1, i + 1);
-    const corr = pearsonCorrelation(xWindow, yWindow);
-    results.push({ index: i, correlation: corr });
+  for (let i = window - 1; i < Math.min(x.length, y.length); i++) {
+    const a = x.slice(i - window + 1, i + 1), b = y.slice(i - window + 1, i + 1);
+    results.push({ index: i, correlation: a.every(Number.isFinite) && b.every(Number.isFinite)
+      ? pearsonCorrelation(a, b) : null });
   }
-
   return results;
 }
 
-/**
- * Run complete statistical analysis on merged data
- * @param {Array} mergedData - Merged market + exchange data
- * @returns {Object} Statistical results
- */
-export function runFullAnalysis(mergedData) {
-  // Extract arrays for analysis
-  const indexReturns = mergedData.map(d => d.indexReturn);
-  const usdBrlChanges = mergedData.map(d => d.usdBrlChangePercent);
-  const dollarFlow = mergedData.map(d => d.dollarFlowProxy);
+export const ANALYSIS_PAIRS = {
+  'usd-index': { x: 'usdBrlChangePercent', y: 'indexReturn', xLabel: 'Variação USD/BRL (%)', yLabel: 'Retorno IBrX-50 (%)', xUnit: '%', yUnit: '%' },
+  'di-index': { x: 'diChangeBps', y: 'indexReturn', xLabel: 'Variação DI futuro (pb)', yLabel: 'Retorno IBrX-50 (%)', xUnit: 'pb', yUnit: '%' },
+  'di-usd': { x: 'diChangeBps', y: 'usdBrlChangePercent', xLabel: 'Variação DI futuro (pb)', yLabel: 'Variação USD/BRL (%)', xUnit: 'pb', yUnit: '%' },
+};
 
-  // Skip first element (no return for first day)
-  const returns = indexReturns.slice(1);
-  const changes = usdBrlChanges.slice(1);
-  const flow = dollarFlow.slice(1);
-
-  // 1. Pearson correlation
+export function runFullAnalysis(mergedData, pair = 'usd-index') {
+  const config = ANALYSIS_PAIRS[pair];
+  const grid = mergedData.slice(1);
+  const samples = grid.filter(d => Number.isFinite(d[config.x]) && Number.isFinite(d[config.y]));
+  const changes = samples.map(d => d[config.x]), returns = samples.map(d => d[config.y]);
+  const x = grid.map(d => d[config.x]), y = grid.map(d => d[config.y]);
   const pearson = pearsonCorrelation(changes, returns);
-
-  // 2. Spearman correlation
-  const spearman = spearmanCorrelation(changes, returns);
-
-  // 3. Linear regression: indexReturn = alpha + beta * usdBrlChange
-  const regression = linearRegression(changes, returns);
-
-  // 4. Lag correlation (does dollar flow predict returns?)
-  const lagResults = lagCorrelation(flow, returns, 10);
-  
-  // Find best lag
-  const bestLag = lagResults.reduce((best, curr) => 
-    Math.abs(curr.correlation) > Math.abs(best.correlation) ? curr : best,
-    lagResults[0]
-  );
-
-  // 5. Rolling correlations
-  const rolling30 = rollingCorrelation(changes, returns, 30);
-  const rolling60 = rollingCorrelation(changes, returns, 60);
-  const rolling90 = rollingCorrelation(changes, returns, 90);
-
-  // 6. Basic descriptive stats
-  const stats = {
-    indexReturnMean: mean(returns),
-    indexReturnStd: stddev(returns),
-    usdChangeReturnMean: mean(changes),
-    usdChangetd: stddev(changes),
-    dataPoints: returns.length,
-  };
-
-  return {
-    pearson,
-    spearman,
-    regression,
-    lagResults,
-    bestLag,
-    rolling30,
-    rolling60,
-    rolling90,
-    descriptive: stats,
-    // Raw arrays for chart rendering
-    rawReturns: returns,
-    rawChanges: changes,
-    rawFlow: flow,
-  };
+  const regression = pearson === null ? { alpha: null, beta: null, rSquared: null, predictions: [] }
+    : linearRegression(changes, returns);
+  const lagResults = lagCorrelation(x, y, 10);
+  const bestLag = lagResults.filter(r => r.lag > 0 && r.correlation !== null).reduce((best, r) =>
+    !best || Math.abs(r.correlation) > Math.abs(best.correlation) ? r : best, null);
+  return { ...config, pearson, spearman: spearmanCorrelation(changes, returns), regression,
+    lagResults, bestLag, rolling30: rollingCorrelation(x, y, 30),
+    rolling60: rollingCorrelation(x, y, 60), rolling90: rollingCorrelation(x, y, 90),
+    dates: grid.map(d => d.date), sampleStart: samples[0]?.date, sampleEnd: samples.at(-1)?.date,
+    descriptive: { dataPoints: samples.length }, rawChanges: changes, rawReturns: returns };
 }

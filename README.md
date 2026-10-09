@@ -1,75 +1,63 @@
-# 💱 IBrX-50 vs Foreign Exchange Flow (BR50-Foreign-Flow)
+# IBrX-50, dólar e DI de 1 ano
 
-![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)
-![Vite](https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white)
-![Chart.js](https://img.shields.io/badge/chart.js-F5788D.svg?style=for-the-badge&logo=chart.js&logoColor=white)
+Painel local de estatísticas entre o índice agregado IBrX-50, o câmbio USD/BRL e a taxa DI de prazo constante de 1 ano. Não seleciona ações individuais e não realiza backtest ou simulação de patrimônio.
 
-An interactive visual study to analyze the impact of foreign exchange flow (USD inflow/outflow) on the Brazilian stock market, specifically the **IBrX-50** index.
+## Executar
 
-The project consumes real data from the **Central Bank of Brazil (BCB OLINDA/SGS)** and **Yahoo Finance** APIs to plot mathematical correlations and run an interactive portfolio simulator based on *Market Timing*.
+Node.js 20.19+ (ou 22.12+).
 
----
-
-## 🎯 Project Goal
-
-The main hypothesis tested by this application is: 
-**Does the variation in the USD/BRL exchange rate directly impact the IBrX-50 index and vice-versa?**
-
-To test this, the application features two main analytical dashboards:
-1. **Historical Visualization:** Interactive charts showing the daily exchange rate variation and the evolution of the IBrX-50 over time.
-2. **Statistics & Backtest:** 
-    - A panel with in-depth statistical metrics such as *Pearson/Spearman Correlation*, Regression (Beta and R²), Lag Correlation (D-1 to D-10), and Rolling Correlation (30 to 90 days).
-    - **Interactive Simulator:** Tests a scenario where you invest 100% of a starting capital (e.g., R$ 10,000) in the index *only* on days of significant USD drops (a proxy for strong foreign capital inflow) and compares the final result against a classic *Buy & Hold* strategy.
-
----
-
-## 🛠️ Technologies & Architecture
-
-- **Vanilla JavaScript & HTML/CSS**: No UI libraries (like React/Vue) were used, extracting maximum performance and native modularity using ES6 modules.
-- **Vite**: Used to serve the application during development and orchestrate proxies (bypassing CORS errors when consuming the BCB/Yahoo APIs).
-- **Chart.js**: High-performance rendering of line, scatter, and bar charts.
-- **Central Bank of Brazil (BCB) API**: Fetches the PTAX (Exchange Rate) data in sliced yearly chunks.
-- **Yahoo Finance API**: Fetches the historical series for `^IBX50` or available proxies via a local proxy.
-
-### Directory Structure
-```bash
-/src
- ├── /analysis     # Mathematical logic (Regressions, Pearson, Backtest Engine)
- ├── /api          # Clients for Yahoo Finance and BCB (OLINDA/SGS)
- ├── /charts       # Chart.js instances for each panel
- ├── /utils        # Helpers (Formatting and O(n) data merging)
- └── main.js       # Application orchestrator
-```
-
----
-
-## 🚀 How to Run Locally
-
-Ensure you have **Node.js** installed on your machine (v16+).
-
-1. Clone the repository:
-```bash
-git clone https://github.com/pigiacomelli/BR50-Foreing-Flow.git
-cd BR50-Foreing-Flow
-```
-
-2. Install the dependencies (only Vite and Chart.js):
-```bash
-npm install
-```
-
-3. Start the development server:
-```bash
+```sh
+npm ci
 npm run dev
 ```
 
-4. Open `http://localhost:3000` in your browser!
+Abra http://127.0.0.1:3000. O período inicial é 01/01/2010 até ontem. A primeira consulta baixa o histórico; as seguintes reutilizam arquivos locais. O painel mostra Pearson, Spearman, regressão linear, defasagens e correlações móveis para cada um dos três pares.
 
----
+## Cobertura e fontes
 
-## 📈 Backtest Preview (Market Timing)
-In the simulator (under the *Statistics & Backtest* tab), you can set a rule such as: **"Buy whenever the USD drops by -1.5% in a single day"**. The application will scan the last 15 years, execute the theoretical purchase, and plot a comparative *Equity Curve* showing how your money would have performed against the market.
+| Série | Fonte | Histórico integrado |
+| --- | --- | --- |
+| IBrX-50 | B3, histórico diário IBXL | Desde 2010 |
+| USD/BRL venda | BCB SGS 1, com PTAX OLINDA como alternativa | Desde 2010 |
+| Contratos DI1 | Price Report da B3, distribuído pelo projeto PYield | Desde 02/01/2018 |
 
----
+**Pendente: obter contratos DI1 de 2010–2017.** A base pública integrada não contém esses anos. O painel informa a limitação e calcula cada correlação somente nas datas disponíveis. Selecionar 2010 não cria taxas DI para os anos ausentes.
 
-> Developed with ☕ and a lot of Vanilla JS.
+O DI de 1 ano é calculado por interpolação flat-forward entre os dois vencimentos que cercam **252 dias úteis**, usando as taxas anuais de ajuste (`AdjstdQtTax`). Não há extrapolação. Os registros conservam os contratos, taxas, vencimentos, dias úteis e peso usados em cada data. A ANBIMA participa apenas como fonte do calendário de feriados, distribuído pelo PYield; sua curva soberana não é usada como DI futuro.
+
+Fontes: [DI1 B3](https://www.b3.com.br/pt_br/produtos-e-servicos/negociacao/juros/futuro-de-taxa-media-de-depositos-interfinanceiros-de-um-dia.htm), [base PYield](https://github.com/crdcj/pyield-data), [metodologia e limitações](docs/metodologia.md).
+
+## Organização
+
+```text
+src/api/         Clientes das séries no servidor local
+src/analysis/    Estatísticas
+src/charts/      Gráficos das séries e das estatísticas
+src/utils/       Alinhamento de datas e formatação
+server/          Coleta B3/BCB, leitura Parquet, curva DI e cache
+scripts/         Exportação das observações e estatísticas
+tests/          Testes de dados, calendário e cálculos
+data/calendars/ Feriados históricos e atuais, com atribuição
+data/cache/     Dados baixados automaticamente (não versionados)
+docs/           Metodologia e cobertura
+```
+
+O cache DI é revalidado após 24 horas ao consultar o painel. Anos encerrados de índice e câmbio são reutilizados; o ano atual é revalidado após uma hora. Não há tarefa agendada. Em falha de atualização DI, o painel pode mostrar a cópia anterior com aviso. Índice/câmbio falham explicitamente se um ano não puder ser obtido.
+
+## Verificar e exportar
+
+```sh
+npm test
+npm run build
+npm run preview
+```
+
+O painel precisa do servidor local: abrir apenas `dist/index.html` não fornece as APIs.
+
+Com `npm run dev` em execução:
+
+```sh
+npm run export:data -- 2010-01-01 2026-10-08
+```
+
+A exportação JSON em `exports/` contém observações, curvas DI com os contratos de origem, cobertura, hash do arquivo baixado e estatísticas por par. Ajuste a data final conforme necessário.

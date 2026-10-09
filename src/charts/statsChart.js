@@ -33,7 +33,7 @@ export function createScatterChart(analysisResults, mergedData) {
   // Regression line: two endpoints
   const xMin = Math.min(...rawChanges);
   const xMax = Math.max(...rawChanges);
-  const regressionLine = [
+  const regressionLine = regression.beta === null ? [] : [
     { x: xMin, y: regression.alpha + regression.beta * xMin },
     { x: xMax, y: regression.alpha + regression.beta * xMax },
   ];
@@ -90,7 +90,7 @@ export function createScatterChart(analysisResults, mergedData) {
           callbacks: {
             label(ctx) {
               if (ctx.dataset.type === 'line') return null;
-              return ` Câmbio: ${formatPercent(ctx.parsed.x)} | Retorno: ${formatPercent(ctx.parsed.y)}`;
+              return `${analysisResults.xLabel}: ${formatNumber(ctx.parsed.x, 3)} | ${analysisResults.yLabel}: ${formatNumber(ctx.parsed.y, 3)}`;
             },
           },
         },
@@ -99,25 +99,25 @@ export function createScatterChart(analysisResults, mergedData) {
         x: {
           title: {
             display: true,
-            text: 'Variação USD/BRL (%)',
+            text: analysisResults.xLabel,
             font: { size: 11, weight: '500' },
           },
           grid: { color: 'rgba(255, 255, 255, 0.04)' },
           ticks: {
             font: { size: 10 },
-            callback: (v) => formatPercent(v, 1),
+            callback: (v) => formatNumber(v, 1),
           },
         },
         y: {
           title: {
             display: true,
-            text: 'Retorno IBrX-50 (%)',
+            text: analysisResults.yLabel,
             font: { size: 11, weight: '500' },
           },
           grid: { color: 'rgba(255, 255, 255, 0.04)' },
           ticks: {
             font: { size: 10 },
-            callback: (v) => formatPercent(v, 1),
+            callback: (v) => formatNumber(v, 1),
           },
         },
       },
@@ -143,11 +143,11 @@ export function createLagChart(analysisResults) {
   const labels = lagResults.map(r => `D${r.lag === 0 ? '' : '-' + r.lag}`);
   const values = lagResults.map(r => r.correlation);
   const colors = lagResults.map(r => {
-    if (r.lag === bestLag.lag) return '#00d4ff';
+    if (r.lag === bestLag?.lag) return '#00d4ff';
     return r.correlation >= 0 ? 'rgba(0, 255, 136, 0.6)' : 'rgba(255, 71, 87, 0.6)';
   });
   const borderColors = lagResults.map(r => {
-    if (r.lag === bestLag.lag) return '#00d4ff';
+    if (r.lag === bestLag?.lag) return '#00d4ff';
     return r.correlation >= 0 ? '#00ff88' : '#ff4757';
   });
 
@@ -190,7 +190,7 @@ export function createLagChart(analysisResults) {
         x: {
           title: {
             display: true,
-            text: 'Lag (dias de defasagem)',
+            text: 'Defasagem em observações do calendário comum',
             font: { size: 11, weight: '500' },
           },
           grid: { display: false },
@@ -232,7 +232,7 @@ export function createRollingChart(analysisResults, mergedData) {
 
   // Map indices back to dates (offset by 1 since we skip first element)
   const mapToDateValue = (rolling) => rolling.map(r => ({
-    x: mergedData[r.index + 1]?.date || mergedData[r.index]?.date,
+    x: analysisResults.dates[r.index],
     y: r.correlation,
   }));
 
@@ -241,7 +241,7 @@ export function createRollingChart(analysisResults, mergedData) {
     data: {
       datasets: [
         {
-          label: '30 dias',
+          label: '30 observações',
           data: mapToDateValue(rolling30),
           borderColor: '#00d4ff',
           backgroundColor: 'rgba(0, 212, 255, 0.05)',
@@ -252,7 +252,7 @@ export function createRollingChart(analysisResults, mergedData) {
           tension: 0.2,
         },
         {
-          label: '60 dias',
+          label: '60 observações',
           data: mapToDateValue(rolling60),
           borderColor: '#a855f7',
           backgroundColor: 'rgba(168, 85, 247, 0.05)',
@@ -263,7 +263,7 @@ export function createRollingChart(analysisResults, mergedData) {
           tension: 0.2,
         },
         {
-          label: '90 dias',
+          label: '90 observações',
           data: mapToDateValue(rolling90),
           borderColor: '#ffa502',
           backgroundColor: 'rgba(255, 165, 2, 0.05)',

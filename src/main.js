@@ -3,14 +3,14 @@
  * Orchestrates data loading, chart rendering, and UI interactions
  */
 import './style.css';
-import { fetchPTAX, calculateDailyChanges } from './api/bcb.js';
-import { fetchMarketData, calculateReturns } from './api/market.js';
+import { fetchDI } from './api/di.js';
+import { createDIChart } from './charts/diChart.js';
+import { fetchPTAX } from './api/bcb.js';
+import { fetchMarketData } from './api/market.js';
 import { mergeByDate, formatNumber, formatPercent, formatDateBR } from './utils/helpers.js';
-import { createMainChart, createFlowChart, destroyCharts } from './charts/priceChart.js';
+import { createMainChart, createExchangeChart, destroyCharts } from './charts/priceChart.js';
 import { createScatterChart, createLagChart, createRollingChart, destroyStatsCharts } from './charts/statsChart.js';
-import { createEquityChart, destroySimCharts } from './charts/simChart.js';
 import { runFullAnalysis, pearsonCorrelation } from './analysis/statistics.js';
-import { runSimulation } from './analysis/simulation.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
 let appState = {
@@ -18,6 +18,7 @@ let appState = {
   analysisResults: null,
   tickerInfo: null,
   isLoading: false,
+  diResult: null,
 };
 
 // ── DOM References ─────────────────────────────────────────────────────────
@@ -36,6 +37,7 @@ function initTabs() {
 
       tabButtons.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
+      tabButtons.forEach(b => b.setAttribute('aria-selected', String(b === btn)));
 
       tabContents.forEach(content => {
         content.classList.remove('active');
@@ -57,6 +59,9 @@ function showLoading() {
   appState.isLoading = true;
   loadingOverlay.classList.remove('hidden');
   loadBtn.disabled = true;
+  loadingOverlay.setAttribute('aria-hidden', 'false');
+  loadingOverlay.setAttribute('aria-busy', 'true');
+  [startDateInput, endDateInput, document.getElementById('analysis-pair')].forEach(el => el.disabled = true);
   loadBtn.textContent = '⏳ Carregando...';
 }
 
@@ -64,20 +69,16 @@ function hideLoading() {
   appState.isLoading = false;
   loadingOverlay.classList.add('hidden');
   loadBtn.disabled = false;
+  loadingOverlay.setAttribute('aria-hidden', 'true');
+  loadingOverlay.setAttribute('aria-busy', 'false');
+  [startDateInput, endDateInput, document.getElementById('analysis-pair')].forEach(el => el.disabled = false);
   loadBtn.textContent = '📊 Carregar Dados';
 }
 
 function showError(message) {
   hideLoading();
-  // Create a temporary error notification
-  const errorDiv = document.createElement('div');
-  errorDiv.className = 'error-notification';
-  errorDiv.innerHTML = `
-    <span>❌ ${message}</span>
-    <button onclick="this.parentElement.remove()">✕</button>
-  `;
-  document.body.appendChild(errorDiv);
-  setTimeout(() => errorDiv.remove(), 8000);
+  document.getElementById('data-status').textContent = message;
+  document.getElementById('data-status').className = 'data-status error';
 }
 
 // ── Data Loading ───────────────────────────────────────────────────────────
@@ -87,32 +88,28 @@ async function loadData() {
   const startDate = startDateInput.value;
   const endDate = endDateInput.value;
 
-  if (!startDate || !endDate) {
-    showError('Por favor, selecione as datas de início e fim.');
+  if (!startDate || !endDate || startDate > endDate) {
+    showError('Selecione um período válido, com início anterior ao fim.');
     return;
   }
 
+  const contract = 'DI 1 ano';
   showLoading();
+  document.getElementById('data-status').textContent = 'Consultando IBrX-50, dólar e DI futuro…';
+  document.getElementById('data-status').className = 'data-status';
 
   try {
     console.log(`📊 Loading data from ${startDate} to ${endDate}...`);
 
-    // Fetch data in parallel
-    const [marketResult, ptaxRaw] = await Promise.all([
-      fetchMarketData(startDate, endDate),
-      fetchPTAX(startDate, endDate),
+    const [market, ptax, di] = await Promise.allSettled([
+      fetchMarketData(startDate, endDate), fetchPTAX(startDate, endDate), fetchDI(startDate, endDate),
     ]);
-
-    console.log(`✓ Market data: ${marketResult.data.length} points (${marketResult.tickerInfo.name})`);
-    console.log(`✓ PTAX data: ${ptaxRaw.length} points`);
-
-    // Process data
-    const marketWithReturns = calculateReturns(marketResult.data);
-    const ptaxWithChanges = calculateDailyChanges(ptaxRaw);
-
-    // Merge by date
-    const merged = mergeByDate(marketWithReturns, ptaxWithChanges);
-    console.log(`✓ Merged data: ${merged.length} common trading days`);
+    if (market.status === 'rejected') throw market.reason;
+    if (ptax.status === 'rejected') throw ptax.reason;
+    const marketResult = market.value;
+    const diResult = di.status === 'fulfilled' ? di.value : { data: [], contract, warning: di.reason.message };
+    const merged = mergeByDate(marketResult.data, ptax.value, diResult.data);
+    appState.diResult = diResult;
 
     if (merged.length < 10) {
       throw new Error('Poucos dados encontrados. Tente expandir o período.');
@@ -122,20 +119,23 @@ async function loadData() {
     appState.tickerInfo = marketResult.tickerInfo;
 
     // Run analysis
-    appState.analysisResults = runFullAnalysis(merged);
+    appState.analysisResults = runFullAnalysis(merged, document.getElementById('analysis-pair').value);
 
     // Update UI
     updateMetrics(merged, marketResult.tickerInfo);
     renderPhase1Charts(merged, marketResult.tickerInfo.name);
     renderPhase2(merged, appState.analysisResults);
-    renderSimulation(merged);
+    createDIChart(merged, contract);
+    updateDI(merged, diResult);
+    document.getElementById('data-status').textContent = `IBrX-50 (B3) e USD/BRL (BCB): ${merged.length} datas comuns. Dados carregados para ${formatDateBR(startDate + 'T12:00:00Z')} a ${formatDateBR(endDate + 'T12:00:00Z')}.`;
+
 
     hideLoading();
     console.log('✅ Dashboard loaded successfully!');
 
   } catch (error) {
     console.error('Error loading data:', error);
-    showError(`Erro ao carregar dados: ${error.message}`);
+    showError(`Erro ao carregar dados: ${error.message}${appState.mergedData ? ' Os gráficos mantêm a consulta anterior.' : ''}`);
   }
 }
 
@@ -168,12 +168,12 @@ function updateMetrics(data, tickerInfo) {
     usdChangeEl.className = `sub ${totalChange <= 0 ? 'positive' : 'negative'}`; // inverted: dollar falling is good for stocks
   }
 
-  // 30-day correlation
+  // 30 common observations
   const corr30El = document.getElementById('metric-corr-30d');
   if (corr30El) {
     const last30Returns = data.slice(-31).map(d => d.indexReturn);
     const last30Changes = data.slice(-31).map(d => d.usdBrlChangePercent);
-    const corr = pearsonCorrelation(last30Changes.slice(1), last30Returns.slice(1));
+    const corr = data.length >= 31 ? pearsonCorrelation(last30Changes.slice(1), last30Returns.slice(1)) : null;
     corr30El.textContent = formatNumber(corr, 4);
     corr30El.style.color = corr < 0 ? '#ff4757' : '#00ff88';
   }
@@ -189,7 +189,7 @@ function updateMetrics(data, tickerInfo) {
 function renderPhase1Charts(data, indexName) {
   destroyCharts();
   createMainChart(data, indexName);
-  createFlowChart(data);
+  createExchangeChart(data);
 }
 
 // ── Phase 2: Statistics ────────────────────────────────────────────────────
@@ -210,10 +210,14 @@ function renderPhase2(mergedData, results) {
   setStatValue('stat-r-squared', formatNumber(results.regression.rSquared, 4));
   setStatValue('stat-beta', formatNumber(results.regression.beta, 4),
     results.regression.beta < 0 ? '#ff4757' : '#00ff88');
-  setStatValue('stat-best-lag', `D-${results.bestLag.lag}`);
-  setStatValue('stat-best-lag-corr', formatNumber(results.bestLag.correlation, 4),
-    results.bestLag.correlation < 0 ? '#ff4757' : '#00ff88');
+  setStatValue('stat-best-lag', results.bestLag ? `D-${results.bestLag.lag}` : '—');
+  setStatValue('stat-best-lag-corr', formatNumber(results.bestLag?.correlation, 4),
+    results.bestLag?.correlation < 0 ? '#ff4757' : '#00ff88');
 
+  document.getElementById('sample-info').textContent = results.descriptive.dataPoints
+    ? `${results.xLabel}${results.xUnit === 'pb' ? ` (${appState.diResult.contract})` : ''} × ${results.yLabel} · ${results.descriptive.dataPoints} pares válidos · ${formatDateBR(results.sampleStart)} a ${formatDateBR(results.sampleEnd)}. Janelas móveis exigem 30, 60 ou 90 observações completas.`
+    : 'Sem observações simultâneas para este par no período. Selecione outro período.';
+  document.getElementById('scatter-title').textContent = `${results.yLabel} × ${results.xLabel}`;
   // Create charts
   destroyStatsCharts();
   createScatterChart(results, mergedData);
@@ -223,65 +227,27 @@ function renderPhase2(mergedData, results) {
 
 
 
-// ── Simulation (Integrated in Phase 2) ─────────────────────────────────────
-function renderSimulation(mergedData) {
-  const dropPercentInput = document.getElementById('sim-drop-percent');
-  const runBtn = document.getElementById('run-sim-btn');
-
-  const updateSim = () => {
-    const dropPercent = parseFloat(dropPercentInput.value) || -1.5;
-
-    // Run simulation
-    const simResults = runSimulation(mergedData, dropPercent);
-
-    const setStatValue = (id, value, color = null) => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.textContent = value;
-        if (color) el.style.color = color;
-      }
-    };
-
-    // Strategy
-    setStatValue('sim-final-capital', `R$ ${formatNumber(simResults.finalCapital, 2)}`);
-    const totalReturnEl = document.getElementById('sim-total-return');
-    if (totalReturnEl) {
-      totalReturnEl.textContent = formatPercent(simResults.totalReturnPercent);
-      totalReturnEl.className = `metric-card__sub ${simResults.totalReturnPercent >= 0 ? 'positive' : 'negative'}`;
+function updateDI(data, result) {
+  const available = data.filter(r => Number.isFinite(r.diRate));
+  const latest = available.at(-1);
+  document.getElementById('metric-di-rate').textContent = latest ? `${formatNumber(latest.diRate, 3)}% a.a.` : 'Indisponível';
+  document.getElementById('metric-di-date').textContent = latest ? `${result.contract} · ${formatDateBR(latest.date)}` : result.contract;
+  document.getElementById('di-title').textContent = `${result.contract} — prazo constante (252 dias úteis)`;
+  const coverage = available.length ? `${available.length} datas comuns com DI: ${formatDateBR(available[0].date)} a ${formatDateBR(latest.date)}.` : 'Sem taxas DI de 1 ano nas datas comuns.';
+  document.getElementById('di-status').textContent = [coverage, result.warning,
+    result.coverageNote,
+    result.fetchedAt ? `Última atualização da base DI: ${new Date(result.fetchedAt).toLocaleString('pt-BR')}.` : ''].filter(Boolean).join(' ');
+  const tbody = document.getElementById('correlation-table');
+  tbody.replaceChildren();
+  for (const [pair, label] of [['usd-index', 'Dólar × IBrX-50'], ['di-index', 'DI × IBrX-50'], ['di-usd', 'DI × Dólar']]) {
+    const r = runFullAnalysis(data, pair);
+    const tr = document.createElement('tr');
+    for (const value of [label, formatNumber(r.pearson, 4), r.descriptive.dataPoints,
+      r.sampleStart ? `${formatDateBR(r.sampleStart)} — ${formatDateBR(r.sampleEnd)}` : 'Sem amostra']) {
+      const td = document.createElement('td'); td.textContent = value; tr.append(td);
     }
-
-    // Benchmark (Buy & Hold)
-    setStatValue('sim-bnh-capital', `R$ ${formatNumber(simResults.buyAndHoldFinal, 2)}`);
-    const bnhReturnEl = document.getElementById('sim-bnh-return');
-    if (bnhReturnEl) {
-      bnhReturnEl.textContent = formatPercent(simResults.buyAndHoldReturn);
-      bnhReturnEl.className = `metric-card__sub ${simResults.buyAndHoldReturn >= 0 ? 'positive' : 'negative'}`;
-    }
-
-    // Entry Date
-    if (simResults.entryDate) {
-      const dateStr = simResults.entryDate.toISOString().split('T')[0];
-      setStatValue('sim-entry-date', dateStr, '#00ff88');
-    } else {
-      setStatValue('sim-entry-date', 'Nenhum gatilho ativado', '#ff4757');
-    }
-
-    // Update subtitle
-    const subtitle = document.getElementById('sim-subtitle');
-    if (subtitle) {
-      subtitle.textContent = `Gatilho: Dólar cair ${dropPercent}% em um dia | Hold: Perpétuo | Capital: R$ 10.000`;
-    }
-
-    // Draw equity curve
-    destroySimCharts();
-    createEquityChart(simResults);
-  };
-
-  // Run once on load
-  updateSim();
-
-  // Attach listener
-  runBtn.onclick = updateSim;
+    tbody.append(tr);
+  }
 }
 
 // ── Initialize Application ─────────────────────────────────────────────────
@@ -291,7 +257,14 @@ function init() {
   // Bind load button
   loadBtn.addEventListener('click', loadData);
 
-  // Auto-load data on startup
+  const today = new Date();
+  const end = new Date(today); end.setUTCDate(end.getUTCDate() - 1);
+  endDateInput.value = end.toISOString().slice(0, 10);
+  startDateInput.value = '2010-01-01';
+  document.getElementById('analysis-pair').addEventListener('change', () => {
+    if (appState.mergedData) renderPhase2(appState.mergedData,
+      runFullAnalysis(appState.mergedData, document.getElementById('analysis-pair').value));
+  });
   loadData();
 }
 

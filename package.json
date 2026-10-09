@@ -1,19 +1,26 @@
 {
-  "name": "dollar-flow-study",
+  "name": "ibrx50-usd-di-study",
   "private": true,
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test",
+    "export:data": "node scripts/export-data.js"
   },
   "dependencies": {
     "chart.js": "^4.4.0",
     "chartjs-adapter-date-fns": "^3.0.0",
-    "date-fns": "^3.6.0"
+    "date-fns": "^3.6.0",
+    "hyparquet": "^1.31.3",
+    "hyparquet-compressors": "^1.1.2"
   },
   "devDependencies": {
     "vite": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=20.19"
   }
 }

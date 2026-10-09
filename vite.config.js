@@ -1,28 +1,10 @@
 import { defineConfig } from 'vite';
+import { fileURLToPath } from 'node:url';
+import { b3Plugin } from './server/b3.js';
 
 export default defineConfig({
-  server: {
-    port: 3000,
-    open: true,
-    proxy: {
-      // Proxy Yahoo Finance API requests through Vite dev server to avoid CORS
-      '/api/yahoo': {
-        target: 'https://query1.finance.yahoo.com',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/yahoo/, ''),
-        headers: {
-          'User-Agent': 'Mozilla/5.0',
-        },
-      },
-      // Proxy BCB SGS API to avoid CORS issues
-      '/api/bcb': {
-        target: 'https://api.bcb.gov.br',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/bcb/, ''),
-      },
-    },
-  },
-  build: {
-    outDir: 'dist',
-  },
+  plugins: [b3Plugin(fileURLToPath(new URL('.', import.meta.url)))],
+  server: { host: '127.0.0.1', port: 3000 },
+  preview: { host: '127.0.0.1', port: 3000 },
+  build: { outDir: 'dist' },
 });

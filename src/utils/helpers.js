@@ -48,7 +48,7 @@ export function formatNumber(num, decimals = 2) {
 export function formatPercent(num, decimals = 2) {
   if (num == null || isNaN(num)) return '—';
   const sign = num >= 0 ? '+' : '';
-  return `${sign}${num.toFixed(decimals)}%`;
+  return `${sign}${formatNumber(num, decimals)}%`;
 }
 
 /**
@@ -67,8 +67,7 @@ export function formatBRL(num) {
  * Normalizes date to YYYY-MM-DD to handle timezone differences
  */
 export function dateKey(date) {
-  const d = new Date(date);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return new Date(date).toISOString().slice(0, 10);
 }
 
 /**
@@ -76,52 +75,32 @@ export function dateKey(date) {
  * Only returns dates present in both series
  * @param {Array} marketData - Market data array [{date, close, dailyReturn, ...}]
  * @param {Array} exchangeData - Exchange rate data [{date, value, change, changePercent}]
- * @param {Array} jurosData - Juros Futuros proxy data [{date, close}] (optional)
+ * @param {Array} jurosData - DI futuro data [{date, rate}] (optional)
  * @returns {Array} Merged data
  */
 export function mergeByDate(marketData, exchangeData, jurosData = []) {
-  // Create lookup from exchange data
-  const exchangeMap = new Map();
-  for (const item of exchangeData) {
-    exchangeMap.set(dateKey(item.date), item);
-  }
-  // Create lookup from juros data
-  const jurosMap = new Map();
-  for (const item of jurosData) {
-    jurosMap.set(dateKey(item.date), item);
-  }
-
-  const merged = [];
-  for (const market of marketData) {
-    const key = dateKey(market.date);
-    const exchange = exchangeMap.get(key);
-    
-    // We only strictly require market and exchange. Juros can be null for a day.
-    if (exchange) {
-      const juros = jurosMap.get(key);
-      merged.push({
-        date: market.date,
-        dateStr: key,
-        // Market data
-        indexClose: market.close,
-        indexReturn: market.dailyReturn || 0,
-        indexOpen: market.open,
-        indexHigh: market.high,
-        indexLow: market.low,
-        indexVolume: market.volume,
-        // Exchange rate data
-        usdBrl: exchange.value,
-        usdBrlChange: exchange.change || 0,
-        usdBrlChangePercent: exchange.changePercent || 0,
-        // Dollar flow proxy (inverted: positive = inflow/BRL strengthening)
-        dollarFlowProxy: -(exchange.changePercent || 0),
-        // Juros Futuros proxy (IRFM11)
-        jurosClose: juros ? juros.close : null,
-      });
-    }
-  }
-
-  return merged.sort((a, b) => a.date - b.date);
+  const exchangeMap = new Map(exchangeData.map(r => [dateKey(r.date), r]));
+  const jurosMap = new Map(jurosData.map(r => [dateKey(r.date), r]));
+  const marketMap = new Map(marketData.map(r => [dateKey(r.date), r]));
+  const merged = [...marketMap.entries()].sort(([a], [b]) => a.localeCompare(b))
+    .filter(([key, market]) => Number.isFinite(market.close) && market.close > 0 &&
+      Number.isFinite(exchangeMap.get(key)?.value) && exchangeMap.get(key).value > 0)
+    .map(([key, market]) => ({
+      date: new Date(`${key}T12:00:00Z`), dateStr: key,
+      indexClose: market.close, usdBrl: exchangeMap.get(key).value,
+      diRate: jurosMap.get(key)?.rate ?? null,
+    }));
+  // Compute changes AFTER joining: both price returns cover the same interval.
+  // DI needs both endpoints; a missing observation never becomes a zero change.
+  return merged.map((row, i) => {
+    const prev = merged[i - 1];
+    return { ...row,
+      indexReturn: prev ? (row.indexClose / prev.indexClose - 1) * 100 : null,
+      usdBrlChangePercent: prev ? (row.usdBrl / prev.usdBrl - 1) * 100 : null,
+      diChangeBps: prev && Number.isFinite(row.diRate) && Number.isFinite(prev.diRate)
+        ? (row.diRate - prev.diRate) * 100 : null,
+    };
+  });
 }
 
 /**

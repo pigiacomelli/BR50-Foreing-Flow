@@ -1,7 +1,7 @@
 /**
  * Price chart module
  * Creates dual-axis chart: IBrX-50 price + USD/BRL exchange rate
- * And a separate bar chart for daily dollar flow proxy
+ * And a separate bar chart for exchange-rate changes
  */
 import { Chart, registerables } from 'chart.js';
 import 'chartjs-adapter-date-fns';
@@ -180,12 +180,12 @@ export function createMainChart(data, indexName = 'IBrX-50') {
 }
 
 /**
- * Create or update the dollar flow bar chart
- * Green bars = dollar inflow (BRL strengthening, USD/BRL falling)
- * Red bars = dollar outflow (BRL weakening, USD/BRL rising)
+ * Create or update the exchange-rate bar chart
+ * Positive bars = USD/BRL rising
+ * Negative bars = USD/BRL falling
  * @param {Array} data - Merged data array
  */
-export function createFlowChart(data) {
+export function createExchangeChart(data) {
   const ctx = document.getElementById('flow-chart');
   if (!ctx) return;
 
@@ -193,9 +193,9 @@ export function createFlowChart(data) {
     flowChartInstance.destroy();
   }
 
-  // Use dollarFlowProxy: positive = inflow, negative = outflow
+  // Exchange-rate variation is not a measure of capital flow.
   const dates = data.map(d => d.date);
-  const flows = data.map(d => d.dollarFlowProxy);
+  const flows = data.map(d => d.usdBrlChangePercent);
   const colors = flows.map(f => f >= 0 ? 'rgba(0, 255, 136, 0.7)' : 'rgba(255, 71, 87, 0.7)');
   const borderColors = flows.map(f => f >= 0 ? '#00ff88' : '#ff4757');
 
@@ -205,7 +205,7 @@ export function createFlowChart(data) {
       labels: dates,
       datasets: [
         {
-          label: 'Fluxo de Dólar (proxy)',
+          label: 'Variação USD/BRL (%)',
           data: flows,
           backgroundColor: colors,
           borderColor: borderColors,
@@ -243,7 +243,7 @@ export function createFlowChart(data) {
             },
             label(ctx) {
               const value = ctx.parsed.y;
-              const direction = value >= 0 ? '🟢 Entrada' : '🔴 Saída';
+              const direction = value >= 0 ? 'Alta do dólar' : 'Queda do dólar';
               return ` ${direction}: ${formatPercent(value)}`;
             },
           },

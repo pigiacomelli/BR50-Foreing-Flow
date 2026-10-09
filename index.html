@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fluxo de Dólar × Mercado Brasileiro</title>
-    <meta name="description" content="Estudo do impacto do fluxo cambial no mercado brasileiro de ações (IBrX-50).">
+    <title>IBrX-50 · Dólar · DI Futuro</title>
+    <meta name="description" content="Correlação entre o índice IBrX-50, o câmbio USD/BRL e contratos DI futuro da B3.">
     
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,37 +30,43 @@
         <!-- 3. HEADER -->
         <header class="header">
             <div class="header__title-group">
-                <h1 class="header__title">💱 Fluxo de Dólar × Mercado Brasileiro</h1>
-                <p class="header__subtitle">Análise do impacto do fluxo cambial no IBrX-50</p>
+                <h1 class="header__title">💱 IBrX-50 · Dólar · DI Futuro</h1>
+                <p class="header__subtitle">Correlação entre bolsa, câmbio e juros — índice agregado e DI de 1 ano</p>
             </div>
             
             <div class="header-controls">
                 <div class="header-controls__input">
-                    <label for="start-date" class="sr-only">Data Inicial</label>
-                    <input type="date" id="start-date" value="2010-01-01" aria-label="Data inicial para análise">
+                    <label for="start-date">Data Inicial</label>
+                    <input type="date" id="start-date"  aria-label="Data inicial para análise">
                 </div>
                 <div class="header-controls__input">
-                    <label for="end-date" class="sr-only">Data Final</label>
-                    <input type="date" id="end-date" value="2026-09-07" aria-label="Data final para análise">
+                    <label for="end-date">Data Final</label>
+                    <input type="date" id="end-date"  aria-label="Data final para análise">
+                </div>
+                <div class="header-controls__input">
+                    <label for="di-tenor">Juros futuros</label>
+                    <input id="di-tenor" type="text" value="DI · 1 ano (252 dias úteis)" readonly aria-label="Prazo do DI">
                 </div>
                 <button type="button" id="load-btn" class="header-controls__btn">📊 Carregar Dados</button>
             </div>
         </header>
 
+        <p id="di-help" class="context-note">DI de prazo constante de 1 ano: interpolação entre contratos DI1 da B3. A base pública integrada começa em 2018; 2010–2017 ainda está pendente.</p>
+        <p id="data-status" class="data-status" role="status" aria-live="polite"></p>
         <!-- 4. TAB NAVIGATION -->
         <nav class="tabs" aria-label="Navegação de fases">
             <button type="button" class="tabs__btn tab-btn active" data-tab="phase1" aria-selected="true">📈 Visualização</button>
-            <button type="button" class="tabs__btn tab-btn" data-tab="phase2" aria-selected="false">📊 Estatísticas & Backtest</button>
+            <button type="button" class="tabs__btn tab-btn" data-tab="phase2" aria-selected="false">📊 Estatísticas</button>
         </nav>
 
         <!-- 5. TAB CONTENT PANELS -->
         <main class="content">
             
             <!-- PHASE 1 -->
-            <section id="phase1" class="tab-content active" aria-labelledby="phase1">
+            <section id="phase1" class="tab-content active" aria-label="Visualização das séries">
                 <div class="metrics-row">
                     <div class="metric-card">
-                        <span class="metric-card__label">IBrX-50 Atual</span>
+                        <span class="metric-card__label">IBrX-50 · último dado</span>
                         <span id="metric-index-price" class="metric-card__value">-</span>
                         <span id="metric-index-change" class="metric-card__sub">-</span>
                     </div>
@@ -70,8 +76,13 @@
                         <span id="metric-usd-change" class="metric-card__sub">-</span>
                     </div>
                     <div class="metric-card">
-                        <span class="metric-card__label">Correlação (30d)</span>
+                        <span class="metric-card__label">Dólar × índice (30 obs.)</span>
                         <span id="metric-corr-30d" class="metric-card__value">-</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-card__label">DI futuro · prazo de 1 ano</span>
+                        <span id="metric-di-rate" class="metric-card__value">—</span>
+                        <span id="metric-di-date" class="metric-card__sub">—</span>
                     </div>
                     <div class="metric-card">
                         <span class="metric-card__label">Período</span>
@@ -93,18 +104,35 @@
                 <div class="chart-container">
                     <div class="card">
                         <header class="card__header">
-                            <h2 class="card__title">Variação Diária do Câmbio (Proxy Fluxo de Dólar)</h2>
-                            <p class="card__subtitle">Barras verdes = entrada de dólar (BRL fortalecendo) | Barras vermelhas = saída de dólar (BRL enfraquecendo)</p>
+                            <h2 class="card__title">Variação do câmbio USD/BRL</h2>
+                            <p class="card__subtitle">Variação percentual entre datas comuns. Alta ou queda do câmbio não mede entrada ou saída de capital.</p>
                         </header>
                         <div class="card__body">
-                            <canvas id="flow-chart" aria-label="Gráfico de variação diária do câmbio proxy para fluxo"></canvas>
+                            <canvas id="flow-chart" aria-label="Gráfico de variação do câmbio"></canvas>
                         </div>
                     </div>
+                </div>
+
+                <div class="chart-container"><div class="card">
+                    <header class="card__header"><h2 id="di-title" class="card__title">DI de 1 ano — prazo constante</h2>
+                    <p id="di-status" class="card__subtitle" role="status"></p></header>
+                    <div class="card__body di-chart-body"><canvas id="di-chart" aria-label="Taxa DI de prazo constante de 1 ano"></canvas></div>
+                </div></div>
+                <div class="card correlation-card">
+                    <header class="card__header"><h2 class="card__title">Correlações entre as três séries</h2>
+                    <p class="card__subtitle">Pearson dos retornos de bolsa e câmbio (%) e da mudança da taxa DI (pontos-base). Cada par usa suas datas válidas; as amostras podem diferir.</p></header>
+                    <div class="table-scroll"><table><thead><tr><th>Comparação</th><th>Correlação</th><th>Pares válidos</th><th>Amostra</th></tr></thead>
+                    <tbody id="correlation-table"></tbody></table></div>
                 </div>
             </section>
 
             <!-- PHASE 2 -->
-            <section id="phase2" class="tab-content" aria-labelledby="phase2">
+            <section id="phase2" class="tab-content" aria-label="Estatísticas">
+                <div class="analysis-controls">
+                    <label for="analysis-pair">Comparação estatística</label>
+                    <select id="analysis-pair"><option value="usd-index">Dólar × IBrX-50</option><option value="di-index">DI futuro × IBrX-50</option><option value="di-usd">DI futuro × Dólar</option></select>
+                    <p id="sample-info" class="context-note"></p>
+                </div>
                 <div class="stats-summary">
                     <div class="stat-card">
                         <span class="stat-label">Correlação Pearson</span>
@@ -123,7 +151,7 @@
                         <span id="stat-beta" class="stat-value">-</span>
                     </div>
                     <div class="stat-card">
-                        <span class="stat-label">Melhor Lag (dias)</span>
+                        <span class="stat-label">Maior |correlação| (D-1 a D-10)</span>
                         <span id="stat-best-lag" class="stat-value">-</span>
                     </div>
                     <div class="stat-card">
@@ -135,15 +163,15 @@
                 <div class="charts-grid">
                     <div class="card">
                         <header class="card__header">
-                            <h2 class="card__title">Scatter: Retorno IBrX-50 vs Variação Cambial</h2>
+                            <h2 id="scatter-title" class="card__title">Dispersão e regressão</h2>
                         </header>
                         <div class="card__body">
-                            <canvas id="scatter-chart" aria-label="Gráfico de dispersão entre retorno e variação cambial"></canvas>
+                            <canvas id="scatter-chart" aria-label="Gráfico de dispersão do par selecionado"></canvas>
                         </div>
                     </div>
                     <div class="card">
                         <header class="card__header">
-                            <h2 class="card__title">Correlação com Lag (D-1 a D-10)</h2>
+                            <h2 class="card__title">Correlação com defasagem (D a D-10)</h2>
                         </header>
                         <div class="card__body">
                             <canvas id="lag-chart" aria-label="Gráfico de correlação com defasagem de dias"></canvas>
@@ -159,50 +187,6 @@
                     </div>
                 </div>
 
-                <!-- CONTROLES DA SIMULAÇÃO -->
-                <div class="card" style="margin-top: 2rem;">
-                    <header class="card__header">
-                        <h2 class="card__title">🎯 Simulação de Investimentos (Backtest)</h2>
-                        <p class="card__subtitle">Ajuste os parâmetros da estratégia (entrada de Dólar) e veja o resultado.</p>
-                    </header>
-                    <div class="card__body" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
-                        <div class="header-controls__input">
-                            <label for="sim-drop-percent" style="color:#8888a0; display:block; margin-bottom: 0.5rem; font-size: 0.85rem;">Queda Diária do Dólar (%)</label>
-                            <input type="number" id="sim-drop-percent" value="-1.5" step="0.1" max="0" style="width: 200px;" aria-label="Porcentagem de queda do dólar">
-                        </div>
-                        <button type="button" id="run-sim-btn" class="header-controls__btn" style="height: 42px;">▶ Rodar Simulação</button>
-                    </div>
-                </div>
-
-                <div class="metrics-row" style="margin-top: 1rem;">
-                    <div class="metric-card">
-                        <span class="metric-card__label">Estratégia: Capital Final</span>
-                        <span id="sim-final-capital" class="metric-card__value">-</span>
-                        <span id="sim-total-return" class="metric-card__sub">Retorno Total</span>
-                    </div>
-                    <div class="metric-card">
-                        <span class="metric-card__label">Buy & Hold: Capital Final</span>
-                        <span id="sim-bnh-capital" class="metric-card__value">-</span>
-                        <span id="sim-bnh-return" class="metric-card__sub">Retorno Total</span>
-                    </div>
-                    <div class="metric-card">
-                        <span class="metric-card__label">Data de Entrada no Mercado</span>
-                        <span id="sim-entry-date" class="metric-card__value">-</span>
-                        <span class="metric-card__sub">Após o 1º gatilho atingido</span>
-                    </div>
-                </div>
-
-                <div class="chart-container">
-                    <div class="card">
-                        <header class="card__header">
-                            <h2 class="card__title">Evolução do Patrimônio (Estratégia vs Buy & Hold)</h2>
-                            <p class="card__subtitle" id="sim-subtitle">Capital Inicial: R$ 10.000</p>
-                        </header>
-                        <div class="card__body">
-                            <canvas id="equity-chart" aria-label="Gráfico de Evolução Patrimonial da Simulação"></canvas>
-                        </div>
-                    </div>
-                </div>
             </section>
 
 
@@ -210,7 +194,7 @@
 
         <!-- 6. FOOTER -->
         <footer class="footer">
-            <p>Dados: Banco Central do Brasil (BCB) | Yahoo Finance | Projeto de estudo acadêmico</p>
+            <p>Dados: BCB (USD/BRL) · B3 (IBrX-50) · B3 via PYield (DI1). Correlação não demonstra causalidade.</p>
         </footer>
 
     </div>
